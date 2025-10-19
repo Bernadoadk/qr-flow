@@ -5,6 +5,12 @@ import {
   Scripts,
   ScrollRestoration,
 } from "@remix-run/react";
+import type { LinksFunction } from "@remix-run/node";
+import indexCSS from "./index.css";
+
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: indexCSS },
+];
 
 export default function App() {
   return (
@@ -17,7 +23,6 @@ export default function App() {
           rel="stylesheet"
           href="https://cdn.shopify.com/static/fonts/inter/v4/styles.css"
         />
-        <link rel="stylesheet" href="/app/index.css" />
         <Meta />
         <Links />
       </head>
