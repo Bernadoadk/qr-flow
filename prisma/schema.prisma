@@ -1,0 +1,249 @@
+// QRFlow - Prisma schema for PostgreSQL
+// Type : PostgreSQL
+// Note : après ajout, exécuter `npx prisma generate` puis `npx prisma migrate dev --name init`
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  // Exemple de DATABASE_URL:
+  // postgresql://user:password@host:5432/qrflow-db
+}
+
+/////////////////////
+// Enums
+/////////////////////
+
+/// Type de QR code
+enum QRType {
+  LINK          // redirige vers une URL
+  PRODUCT       // redirige vers une page produit Shopify
+  VIDEO         // ouvre une vidéo / tutoriel
+  LOYALTY       // lié à un programme de fidélité
+  CAMPAIGN      // QR rattaché à une campagne spécifique
+}
+
+/// Type d'événement analytics
+enum EventType {
+  SCAN
+  REDIRECT
+  PURCHASE
+  CLICK
+  UPSELL_CLICK
+  CROSS_SELL_CLICK
+  PROMO_CODE_USED
+}
+
+/// Niveau d'abonnement merchant
+enum Plan {
+  FREE
+  BASIC
+  PRO
+  ENTERPRISE
+}
+
+/////////////////////
+// Models
+/////////////////////
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+}
+
+model Merchant {
+  id            String    @id @default(cuid())
+  shopifyDomain String    @unique                         // ex: myshop.myshopify.com
+  accessToken   String?                                     // token OAuth (chiffrer si possible)
+  plan          Plan      @default(FREE)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // relations
+  qrcodes       QRCode[] 
+  campaigns     Campaign[]
+  loyalty       LoyaltyProgram?
+  // optionally store settings (JSON)
+  settings      Json? 
+
+  @@map("merchants")
+  @@index([plan])
+}
+
+model QRCode {
+  id            String    @id @default(cuid())
+  merchantId    String
+  title         String
+  slug          String?           @unique @db.VarChar(191) // optional short id usable dans l'URL public
+  destination   String            // URL (ou product handle / custom payload)
+  type          QRType            @default(LINK)
+  color         String?           
+  logoUrl       String?           
+  style         Json?             // stockage des options graphiques (shape, dots, margin, etc.)
+  scanCount     Int       @default(0)
+  active        Boolean   @default(true)
+  expiresAt     DateTime?          
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Upsell/Cross-sell configuration
+  upsellConfig  Json?             // Configuration pour les suggestions de produits
+  landingPage   Json?             // Configuration de la page d'atterrissage personnalisée
+
+  // campaign relation
+  campaignId    String? 
+  campaign      Campaign? @relation(fields: [campaignId], references: [id])
+
+  // back relation
+  analytics     AnalyticsEvent[]
+
+  merchant      Merchant  @relation(fields: [merchantId], references: [id])
+
+  @@map("qrcodes")
+  @@index([merchantId])
+  @@index([slug])
+  @@index([type])
+}
+
+model Campaign {
+  id          String    @id @default(cuid())
+  merchantId  String
+  name        String
+  description String?
+  startDate   DateTime
+  endDate     DateTime?
+  status      String    @default("active") // active|paused|ended
+  
+  // 🎨 Design et branding
+  primaryColor     String?   @default("#007b5c")
+  secondaryColor   String?   @default("#ffffff")
+  backgroundColor  String?   @default("#f8f9fa")
+  logoUrl         String?
+  bannerUrl       String?
+  fontFamily      String?   @default("Inter")
+  
+  // 📝 Contenu dynamique
+  mainOffer       String?   // Offre principale
+  featuredProducts Json?    // Produits vedettes (array of product IDs)
+  testimonials    Json?     // Témoignages clients
+  ctaText         String?   @default("Découvrir les offres")
+  ctaButtonColor  String?   @default("#007b5c")
+  
+  // 🎯 Objectifs et KPIs
+  targetScans     Int?      @default(1000)
+  targetSignups   Int?      @default(200)
+  budget          Float?
+  expectedROI     Float?
+  
+  // 🔗 Intégrations
+  googleAnalyticsId String?
+  mailchimpListId   String?
+  klaviyoListId     String?
+  facebookPixelId    String?
+  
+  // 📊 Analytics
+  totalScans        Int      @default(0)
+  totalSignups      Int      @default(0)
+  conversionRate    Float    @default(0)
+  
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  qrcodes     QRCode[] 
+  merchant    Merchant  @relation(fields: [merchantId], references: [id])
+
+  @@map("campaigns")
+  @@index([merchantId])
+  @@index([status])
+}
+
+model LoyaltyProgram {
+  id            String   @id @default(cuid())
+  merchantId    String   @unique
+  name          String
+  description   String?
+  pointsPerScan Int      @default(1)
+  rewards       Json?    // structure JSON listant règles / seuils / remises
+  active        Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  merchant      Merchant @relation(fields: [merchantId], references: [id])
+  // optionally link customers points in a separate table in the future
+
+  @@map("loyalty_programs")
+  @@index([active])
+}
+
+model AnalyticsEvent {
+  id         String    @id @default(cuid())
+  qrId       String
+  type       EventType @default(SCAN)
+  meta       Json?     // données additionnelles (ip, userAgent, country, device, utm, shopifyOrderId)
+  createdAt  DateTime  @default(now())
+
+  qr         QRCode    @relation(fields: [qrId], references: [id])
+
+  @@map("analytics_events")
+  @@index([qrId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+/////////////////////
+// (Optionnel) Table customers / points
+/////////////////////
+
+model CustomerPoints {
+  id          String   @id @default(cuid())
+  merchantId  String
+  customerId  String   // Shopify customer id (stringified) or email
+  points      Int      @default(0)
+  meta        Json?    // extra data (lastScanAt, source)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("customer_points")
+  @@index([merchantId, customerId])
+}
+
+/////////////////////
+// Audit / jobs / rate limits (optionnel)
+/////////////////////
+
+model WebhookLog {
+  id         String   @id @default(cuid())
+  merchantId String?
+  topic      String
+  payload    Json
+  receivedAt DateTime @default(now())
+
+  @@map("webhook_logs")
+  @@index([merchantId])
+}
+
+model RateLimit {
+  id         String   @id @default(cuid())
+  merchantId String
+  windowStart DateTime
+  requests   Int      @default(0)
+
+  @@map("rate_limits")
+  @@index([merchantId, windowStart])
+}
