@@ -1,5 +1,5 @@
 {
-  "buildCommand": "node scripts/vercel-build.js",
+  "buildCommand": "npm run build",
   "outputDirectory": "build/client",
   "framework": "remix",
   "installCommand": "npm install",
@@ -18,10 +18,5 @@
       "path": "/api/cron/cleanup",
       "schedule": "0 2 * * *"
     }
-  ],
-  "functions": {
-    "build/server/index.js": {
-      "maxDuration": 30
-    }
-  }
+  ]
 }

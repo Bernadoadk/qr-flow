@@ -6,8 +6,6 @@
  */
 
 const { execSync } = require('child_process');
-const fs = require('fs');
-const path = require('path');
 
 console.log('🚀 Starting Vercel build process...');
 
@@ -16,22 +14,26 @@ try {
   console.log('📦 Generating Prisma client...');
   execSync('npx prisma generate', { stdio: 'inherit' });
 
-  // 2. Vérifier si la base de données est accessible
-  console.log('🔍 Checking database connection...');
-  
-  // 3. Exécuter les migrations en production
-  console.log('🗄️ Running database migrations...');
-  execSync('npx prisma migrate deploy', { 
-    stdio: 'inherit',
-    env: {
-      ...process.env,
-      NODE_ENV: 'production'
+  // 2. Exécuter les migrations en production (seulement si DATABASE_URL est disponible)
+  if (process.env.DATABASE_URL) {
+    console.log('🗄️ Running database migrations...');
+    try {
+      execSync('npx prisma migrate deploy', { 
+        stdio: 'inherit',
+        env: {
+          ...process.env,
+          NODE_ENV: 'production'
+        }
+      });
+      console.log('✅ Database migrations completed successfully');
+    } catch (migrationError) {
+      console.warn('⚠️ Migration failed, but continuing with build...', migrationError.message);
     }
-  });
+  } else {
+    console.log('⚠️ No DATABASE_URL found, skipping migrations');
+  }
 
-  console.log('✅ Database migrations completed successfully');
-
-  // 4. Construire l'application Remix
+  // 3. Construire l'application Remix
   console.log('🏗️ Building Remix application...');
   execSync('npx remix vite:build', { stdio: 'inherit' });
 
@@ -39,19 +41,5 @@ try {
 
 } catch (error) {
   console.error('❌ Build failed:', error.message);
-  
-  // En cas d'erreur de migration, on continue quand même le build
-  // pour éviter de bloquer le déploiement
-  if (error.message.includes('migrate')) {
-    console.warn('⚠️ Migration failed, but continuing with build...');
-    try {
-      execSync('npx remix vite:build', { stdio: 'inherit' });
-      console.log('🏗️ Application built successfully despite migration issues');
-    } catch (buildError) {
-      console.error('❌ Application build also failed:', buildError.message);
-      process.exit(1);
-    }
-  } else {
-    process.exit(1);
-  }
+  process.exit(1);
 }
