@@ -2,12 +2,11 @@
 
 client_id = "b3c2fb9dc4cbcc80e1d96b1cfa9effeb"
 name = "QRFlow"
-application_url = "https://example.com"
+application_url = "https://qr-flow-flax.vercel.app"
 embedded = true
 
 [build]
 automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2026-01"
@@ -22,7 +21,7 @@ api_version = "2026-01"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-scopes = "write_products"
+scopes = "read_products,write_products,read_orders,write_orders"
 
 [auth]
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://qr-flow-flax.vercel.app/api/auth/callback", "https://qr-flow-flax.vercel.app/auth/shopify/callback", "https://qr-flow-flax.vercel.app/api/auth/callback" ]
