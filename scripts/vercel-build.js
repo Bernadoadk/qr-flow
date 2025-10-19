@@ -1,45 +1,50 @@
 #!/usr/bin/env node
 
 /**
- * Script de build pour Vercel avec migrations automatiques
- * Ce script s'exécute pendant le processus de build sur Vercel
+ * Script de build et migration pour Vercel
+ * Exécute les migrations Prisma avant le build
  */
 
 const { execSync } = require('child_process');
 
-console.log('🚀 Starting Vercel build process...');
+console.log('🚀 Début du processus de build et migration...');
 
 try {
-  // 1. Générer le client Prisma
-  console.log('📦 Generating Prisma client...');
-  execSync('npx prisma generate', { stdio: 'inherit' });
-
-  // 2. Exécuter les migrations en production (seulement si DATABASE_URL est disponible)
-  if (process.env.DATABASE_URL) {
-    console.log('🗄️ Running database migrations...');
-    try {
-      execSync('npx prisma migrate deploy', { 
-        stdio: 'inherit',
-        env: {
-          ...process.env,
-          NODE_ENV: 'production'
-        }
-      });
-      console.log('✅ Database migrations completed successfully');
-    } catch (migrationError) {
-      console.warn('⚠️ Migration failed, but continuing with build...', migrationError.message);
-    }
-  } else {
-    console.log('⚠️ No DATABASE_URL found, skipping migrations');
+  // Vérifier que la DATABASE_URL est définie
+  if (!process.env.DATABASE_URL) {
+    throw new Error('❌ DATABASE_URL non définie dans les variables d\'environnement');
   }
 
-  // 3. Construire l'application Remix
-  console.log('🏗️ Building Remix application...');
-  execSync('npx remix vite:build', { stdio: 'inherit' });
+  console.log('✅ DATABASE_URL trouvée');
 
-  console.log('🎉 Build completed successfully!');
+  // Générer le client Prisma
+  console.log('📦 Génération du client Prisma...');
+  execSync('npx prisma generate', { 
+    stdio: 'inherit',
+    env: { ...process.env }
+  });
+
+  // Exécuter les migrations
+  console.log('🔄 Exécution des migrations Prisma...');
+  execSync('npx prisma migrate deploy', { 
+    stdio: 'inherit',
+    env: { ...process.env }
+  });
+
+  console.log('✅ Migrations terminées avec succès');
+
+  // Vérifier la connexion à la base de données
+  console.log('🔍 Vérification de la connexion à la base de données...');
+  execSync('npx prisma db pull --print', { 
+    stdio: 'pipe',
+    env: { ...process.env }
+  });
+
+  console.log('✅ Connexion à la base de données vérifiée');
 
 } catch (error) {
-  console.error('❌ Build failed:', error.message);
+  console.error('❌ Erreur lors du processus de migration:', error.message);
   process.exit(1);
 }
+
+console.log('🎉 Build et migration terminés avec succès !');
