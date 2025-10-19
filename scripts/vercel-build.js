@@ -5,7 +5,7 @@
  * Exécute les migrations Prisma avant le build
  */
 
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 
 console.log('🚀 Début du processus de build et migration...');
 

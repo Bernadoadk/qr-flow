@@ -5,7 +5,7 @@
  * S'exécute après le déploiement pour vérifier que tout fonctionne
  */
 
-const { execSync } = require('child_process');
+import { execSync } from 'child_process';
 
 console.log('🔍 Running post-deployment checks...');
 
