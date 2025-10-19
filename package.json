@@ -2,7 +2,8 @@
   "name": "qr-flow",
   "private": true,
   "scripts": {
-    "build": "node scripts/vercel-build.js && remix vite:build",
+    "build": "remix vite:build",
+    "postinstall": "prisma generate",
     "dev": "shopify app dev",
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
