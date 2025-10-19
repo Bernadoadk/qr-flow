@@ -16,6 +16,10 @@ api_version = "2026-01"
   uri = "/webhooks/app/scopes_update"
 
   [[webhooks.subscriptions]]
+  uri = "/webhooks"
+  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
+
+  [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
   uri = "/webhooks/app/uninstalled"
 
@@ -24,4 +28,8 @@ api_version = "2026-01"
 scopes = "read_products,write_products,read_orders,write_orders"
 
 [auth]
-redirect_urls = [ "https://qr-flow-flax.vercel.app/api/auth/callback", "https://qr-flow-flax.vercel.app/auth/shopify/callback", "https://qr-flow-flax.vercel.app/api/auth/callback" ]
+redirect_urls = [
+  "https://qr-flow-flax.vercel.app/auth/callback",
+  "https://qr-flow-flax.vercel.app/auth/shopify/callback",
+  "https://qr-flow-flax.vercel.app/api/auth/callback"
+]

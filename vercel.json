@@ -18,5 +18,16 @@
       "path": "/api/cron/cleanup",
       "schedule": "0 2 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "app/routes/webhooks.customers.data_request.tsx": {
+      "maxDuration": 30
+    },
+    "app/routes/webhooks.customers.redact.tsx": {
+      "maxDuration": 30
+    },
+    "app/routes/webhooks.shop.redact.tsx": {
+      "maxDuration": 30
+    }
+  }
 }

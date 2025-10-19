@@ -154,3 +154,4 @@ L'utilisateur peut maintenant créer, prévisualiser, tester et utiliser ses QR 
 
 
 
+
