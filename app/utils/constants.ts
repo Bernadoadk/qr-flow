@@ -7,17 +7,41 @@ export const APP_DESCRIPTION = 'Application Shopify pour créer et gérer des QR
 export const QR_TYPES = {
   LINK: 'LINK',
   PRODUCT: 'PRODUCT',
-  VIDEO: 'VIDEO',
   LOYALTY: 'LOYALTY',
   CAMPAIGN: 'CAMPAIGN',
+  
+  // Shopify QR Codes
+  HOMEPAGE: 'HOMEPAGE',
+  COLLECTION: 'COLLECTION',
+  ADD_TO_CART: 'ADD_TO_CART',
+  CHECKOUT: 'CHECKOUT',
+  DISCOUNT: 'DISCOUNT',
+  
+  // Custom QR Codes
+  TEXT: 'TEXT',
+  EMAIL: 'EMAIL',
+  PHONE: 'PHONE',
+  SMS: 'SMS',
 } as const;
 
 export const QR_TYPE_LABELS = {
   LINK: 'Lien',
   PRODUCT: 'Produit',
-  VIDEO: 'Vidéo',
   LOYALTY: 'Fidélité',
   CAMPAIGN: 'Campagne',
+  
+  // Shopify QR Codes
+  HOMEPAGE: 'Page d\'accueil',
+  COLLECTION: 'Collection',
+  ADD_TO_CART: 'Ajouter au panier',
+  CHECKOUT: 'Checkout',
+  DISCOUNT: 'Code promo',
+  
+  // Custom QR Codes
+  TEXT: 'Texte',
+  EMAIL: 'Email',
+  PHONE: 'Téléphone',
+  SMS: 'SMS',
 } as const;
 
 // Event types

@@ -1,5 +1,7 @@
 import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { prisma } from "~/db.server";
+import { ShopifyRewardsService } from "~/utils/shopify-rewards.server";
+import { LoyaltyService } from "~/utils/loyalty.server";
 import { verifyWebhookSignature } from "~/utils/security.server";
 import { getOrCreateMerchant } from "~/utils/merchant.server";
 import { AnalyticsService } from "~/utils/analytics.server";
@@ -43,7 +45,7 @@ export async function action({ request }: ActionFunctionArgs) {
 
     // Process order for loyalty points if applicable
     if (orderData.customer && orderData.customer.id) {
-      await processOrderForLoyalty(merchant.id, orderData);
+      await processOrderForLoyalty(merchant.id, orderData, request);
     }
 
     // Process order for conversion tracking
@@ -60,7 +62,7 @@ export async function action({ request }: ActionFunctionArgs) {
 /**
  * Process order for loyalty points
  */
-async function processOrderForLoyalty(merchantId: string, orderData: any) {
+async function processOrderForLoyalty(merchantId: string, orderData: any, request?: Request) {
   try {
     // Check if merchant has loyalty program
     const loyaltyProgram = await prisma.loyaltyProgram.findUnique({
@@ -103,9 +105,40 @@ async function processOrderForLoyalty(merchantId: string, orderData: any) {
           },
         },
       });
+
+      // Après attribution des points, vérifier et appliquer les récompenses
+      await processLoyaltyRewards(merchantId, customerId, request);
     }
   } catch (error) {
     console.error("Error processing loyalty points:", error);
+  }
+}
+
+/**
+ * Process loyalty rewards after points attribution
+ */
+async function processLoyaltyRewards(merchantId: string, customerId: string, request?: Request) {
+  try {
+    // Récupérer les points et le palier du client
+    const customerPoints = await LoyaltyService.getCustomerPoints(merchantId, customerId);
+    const currentTier = customerPoints.tier;
+
+    console.log(`🎁 Vérification récompenses pour ${customerId} (${currentTier})`);
+
+    // Vérifier si le client a déjà des récompenses actives
+    const existingRewards = await ShopifyRewardsService.getCustomerActiveRewards(merchantId, customerId);
+    
+    if (existingRewards && existingRewards.tier === currentTier) {
+      console.log(`✅ Récompenses déjà actives pour ${currentTier}`);
+      return;
+    }
+
+    // Appliquer les récompenses du nouveau palier
+    await ShopifyRewardsService.applyTierRewards(merchantId, customerId, currentTier, request);
+    
+    console.log(`🎉 Récompenses appliquées avec succès pour ${currentTier}`);
+  } catch (error) {
+    console.error("❌ Erreur traitement récompenses:", error);
   }
 }
 

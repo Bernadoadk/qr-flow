@@ -1,0 +1,232 @@
+/* Polices personnalisées QR-Flow */
+
+/* Polices de base */
+@font-face {
+  font-family: 'Lava';
+  src: url('./fonts/Lava.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Dacherry';
+  src: url('./fonts/Dacherry.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'BebasNeue';
+  src: url('./fonts/BebasNeue-Regular.woff2') format('woff2'),
+       url('./fonts/BebasNeue-Regular.woff') format('woff'),
+       url('./fonts/BebasNeue-Regular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Garet';
+  src: url('./fonts/Garet-Book.woff2') format('woff2'),
+       url('./fonts/Garet-Book.woff') format('woff'),
+       url('./fonts/Garet-Book.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Garet';
+  src: url('./fonts/Garet-Heavy.woff2') format('woff2'),
+       url('./fonts/Garet-Heavy.woff') format('woff'),
+       url('./fonts/Garet-Heavy.ttf') format('truetype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'LemonMilk';
+  src: url('./fonts/LEMONMILK-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'LemonMilk';
+  src: url('./fonts/LEMONMILK-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'LemonMilk';
+  src: url('./fonts/LEMONMILK-Light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'LemonMilk';
+  src: url('./fonts/LEMONMILK-Medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+}
+
+/* Polices thématiques */
+@font-face {
+  font-family: 'Christmas';
+  src: url('./fonts/AmericanChristmas_PERSONAL_USE_ONLY.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Halloween';
+  src: url('./fonts/Halloween.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Easter';
+  src: url('./fonts/EasterTime.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Valentine';
+  src: url('./fonts/Lovely Valentine Sans.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Valentine Script';
+  src: url('./fonts/Lovely Valentine Script.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Polices fun */
+@font-face {
+  font-family: 'Bouncy';
+  src: url('./fonts/Bouncy-PERSONAL_USE_ONLY.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Bouncy';
+  src: url('./fonts/Bouncy-Black-PERSONAL_USE_ONLY.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Bouncy';
+  src: url('./fonts/Bouncy-Thin-PERSONAL_USE_ONLY.otf') format('opentype');
+  font-weight: 100;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'PastelPalooza';
+  src: url('./fonts/PastelPalooza.woff') format('woff'),
+       url('./fonts/PastelPalooza.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Super Squad';
+  src: url('./fonts/Super Squad.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Super Squad';
+  src: url('./fonts/Super Squad Italic.otf') format('opentype');
+  font-weight: normal;
+  font-style: italic;
+}
+
+/* Polices élégantes */
+@font-face {
+  font-family: 'Vogue';
+  src: url('./fonts/Vogue.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Woman';
+  src: url('./fonts/Woman.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Beauty';
+  src: url('./fonts/Beauty.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Beauty Display';
+  src: url('./fonts/BeautyDisplay.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Polices gaming */
+@font-face {
+  font-family: 'Pokemon';
+  src: url('./fonts/Pokemon Solid.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Pokemon Hollow';
+  src: url('./fonts/Pokemon Hollow.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Super Mario';
+  src: url('./fonts/SuperMario256.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Polices créatives */
+@font-face {
+  font-family: 'Magic Funk';
+  src: url('./fonts/Magic Funk.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Magic Sound';
+  src: url('./fonts/Magic Sound.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Starborn';
+  src: url('./fonts/Starborn.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'Starbim';
+  src: url('./fonts/Starbim.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+}
+

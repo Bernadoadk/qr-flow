@@ -1,0 +1,45 @@
+.qr-animate {
+  transform: scale(0.85);
+  opacity: 0.4;
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+.qr-preview-container {
+  transition: transform 0.25s ease, opacity 0.25s ease;
+}
+
+/* Forcer la transparence du background du QR code */
+.qr-preview-container canvas,
+.qr-preview-container svg {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* S'assurer que le QR code est transparent */
+.qr-preview-container > * {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Forcer la transparence du canvas généré par qr-code-styling */
+.qr-preview-container canvas {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Masquer le background blanc du QR code */
+.qr-preview-container {
+  background: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Utiliser un mask pour révéler le background */
+.qr-preview-container canvas {
+  mix-blend-mode: multiply;
+  background: transparent !important;
+}
+
+.qr-preview-container svg {
+  mix-blend-mode: multiply;
+  background: transparent !important;
+}

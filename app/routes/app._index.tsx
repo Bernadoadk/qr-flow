@@ -14,6 +14,7 @@ import { formatNumber, formatPercentage, formatDate } from '../utils/formatters'
 import { motion, AnimatePresence } from 'framer-motion';
 import { useToast } from '../components/ui/Toast';
 import { useLoading } from '../hooks/useLoading';
+import { useQuickNotifications } from '../components/ui/NotificationSystem';
 import {
   QrCode,
   TrendingUp,
@@ -207,6 +208,7 @@ export default function Index() {
   const navigate = useNavigate();
   const { success, error: showError } = useToast();
   const { isLoading, withLoading } = useLoading();
+  const { success: notifySuccess, error: notifyError, info: notifyInfo } = useQuickNotifications();
 
   useEffect(() => {
     // Detect dark mode preference
@@ -289,7 +291,7 @@ export default function Index() {
   ];
 
   return (
-    <Page>
+    <Page fullWidth>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           {/* Welcome Section */}
           <motion.div

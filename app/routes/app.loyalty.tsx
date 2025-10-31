@@ -13,10 +13,15 @@ import { Badge } from '../components/ui/Badge';
 import Modal from '../components/ui/Modal';
 import EmptyState from '../components/ui/EmptyState';
 import Loader from '../components/ui/Loader';
+import LoyaltyPersonalization from '../components/loyalty/LoyaltyPersonalization';
+import { LoyaltyRewardsManager } from '../components/loyalty/LoyaltyRewardsManager';
 import { formatNumber, formatDate, formatCurrency, formatPercentage } from '../utils/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuickNotifications } from '../components/ui/NotificationSystem';
+import ConfirmDialog from '../components/ui/ConfirmDialog';
 import {
   Plus,
+  Edit,
   Search,
   Users,
   Star,
@@ -34,7 +39,6 @@ import {
   Activity,
   Clock,
   Check,
-  Edit,
   Trash2,
   Eye,
   Mail,
@@ -65,10 +69,23 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     },
   });
 
+  // Get reward templates for this merchant
+  const rewardTemplates = await prisma.rewardTemplates.findMany({
+    where: {
+      merchantId: merchant.id,
+      isActive: true
+    },
+    orderBy: [
+      { tier: 'asc' },
+      { rewardType: 'asc' }
+    ]
+  });
+
   return json({
     shop: session?.shop || (admin as any).shopifyDomain || (admin as any).shop || (admin as any).domain,
     loyaltyPrograms,
     customerPoints,
+    rewardTemplates,
   });
 };
 
@@ -131,10 +148,50 @@ export const action = async ({ request }: ActionFunctionArgs) => {
       case "delete_loyalty_program": {
         const id = formData.get("id") as string;
 
+        console.log(`🗑️ Suppression du programme de fidélité ${id} pour le marchand ${merchant.id}`);
+
+        // 1. Supprimer d'abord les données associées (dans l'ordre des dépendances)
+        
+        // Supprimer les récompenses clients actives
+        await prisma.customerRewards.deleteMany({
+          where: { merchantId: merchant.id }
+        });
+        console.log(`✅ Récompenses clients supprimées`);
+
+        // Supprimer les codes de réduction Shopify générés
+        await prisma.shopifyDiscountCodes.deleteMany({
+          where: { merchantId: merchant.id }
+        });
+        console.log(`✅ Codes de réduction Shopify supprimés`);
+
+        // Supprimer les templates de récompenses
+        await prisma.rewardTemplates.deleteMany({
+          where: { merchantId: merchant.id }
+        });
+        console.log(`✅ Templates de récompenses supprimés`);
+
+        // Supprimer les points des clients
+        await prisma.customerPoints.deleteMany({
+          where: { merchantId: merchant.id }
+        });
+        console.log(`✅ Points clients supprimés`);
+
+        // Supprimer les QR codes LOYALTY associés
+        await prisma.qRCode.deleteMany({
+          where: { 
+            merchantId: merchant.id,
+            type: "LOYALTY"
+          }
+        });
+        console.log(`✅ QR codes LOYALTY supprimés`);
+
+        // Supprimer le programme de fidélité lui-même
         await prisma.loyaltyProgram.delete({
           where: { id },
         });
+        console.log(`✅ Programme de fidélité supprimé`);
 
+        console.log(`🎉 Programme de fidélité ${id} supprimé avec TOUTES ses données associées`);
         return json({ success: true });
       }
 
@@ -175,6 +232,148 @@ export const action = async ({ request }: ActionFunctionArgs) => {
         return json({ success: true, customerPoints });
       }
 
+      case "update_loyalty_personalization": {
+        const loyaltyProgramId = formData.get("loyaltyProgramId") as string;
+        console.log("🔄 Mise à jour personnalisation loyalty:", loyaltyProgramId);
+        
+        // Récupérer toutes les données de personnalisation
+        const personalizationData = {
+          primaryColor: formData.get("primaryColor") as string,
+          primaryColorGradient: formData.get("primaryColorGradient") === "true",
+          primaryGradientColors: formData.get("primaryGradientColors") ? JSON.parse(formData.get("primaryGradientColors") as string) : null,
+          primaryGradientDirection: formData.get("primaryGradientDirection") as string,
+          secondaryColor: formData.get("secondaryColor") as string,
+          secondaryColorGradient: formData.get("secondaryColorGradient") === "true",
+          secondaryGradientColors: formData.get("secondaryGradientColors") ? JSON.parse(formData.get("secondaryGradientColors") as string) : null,
+          secondaryGradientDirection: formData.get("secondaryGradientDirection") as string,
+          backgroundColor: formData.get("backgroundColor") as string,
+          backgroundColorGradient: formData.get("backgroundColorGradient") === "true",
+          backgroundGradientColors: formData.get("backgroundGradientColors") ? JSON.parse(formData.get("backgroundGradientColors") as string) : null,
+          backgroundGradientDirection: formData.get("backgroundGradientDirection") as string,
+          backgroundImage: formData.get("backgroundImage") as string,
+          
+          // 🎨 Personnalisation des cartes
+          cardBackgroundColor: formData.get("cardBackgroundColor") as string,
+          cardBackgroundGradient: formData.get("cardBackgroundGradient") === "true",
+          cardBackgroundGradientColors: formData.get("cardBackgroundGradientColors") ? JSON.parse(formData.get("cardBackgroundGradientColors") as string) : null,
+          cardBackgroundGradientDirection: formData.get("cardBackgroundGradientDirection") as string,
+          cardBorderColor: formData.get("cardBorderColor") as string,
+          cardBorderWidth: formData.get("cardBorderWidth") ? parseInt(formData.get("cardBorderWidth") as string) : null,
+          cardBorderRadius: formData.get("cardBorderRadius") ? parseInt(formData.get("cardBorderRadius") as string) : null,
+          cardShadow: formData.get("cardShadow") as string,
+          
+          // 🎨 Personnalisation des mini-cartes (tiers)
+          miniCardBackgroundColor: formData.get("miniCardBackgroundColor") as string,
+          miniCardBackgroundGradient: formData.get("miniCardBackgroundGradient") === "true",
+          miniCardBackgroundGradientColors: formData.get("miniCardBackgroundGradientColors") ? JSON.parse(formData.get("miniCardBackgroundGradientColors") as string) : null,
+          miniCardBackgroundGradientDirection: formData.get("miniCardBackgroundGradientDirection") as string,
+          miniCardBorderColor: formData.get("miniCardBorderColor") as string,
+          miniCardBorderWidth: formData.get("miniCardBorderWidth") ? parseInt(formData.get("miniCardBorderWidth") as string) : null,
+          miniCardBorderRadius: formData.get("miniCardBorderRadius") ? parseInt(formData.get("miniCardBorderRadius") as string) : null,
+          miniCardShadow: formData.get("miniCardShadow") as string,
+          
+          // 🎨 Typographie
+          fontFamily: formData.get("fontFamily") as string,
+          fontSize: formData.get("fontSize") ? parseInt(formData.get("fontSize") as string) : null,
+          fontWeight: formData.get("fontWeight") as string,
+          
+          // 🎨 Boutons et CTA
+          ctaButtonColor: formData.get("ctaButtonColor") as string,
+          ctaButtonColorGradient: formData.get("ctaButtonColorGradient") === "true",
+          ctaButtonColorGradientColors: formData.get("ctaButtonColorGradientColors") ? JSON.parse(formData.get("ctaButtonColorGradientColors") as string) : null,
+          ctaButtonColorGradientDirection: formData.get("ctaButtonColorGradientDirection") as string,
+          ctaText: formData.get("ctaText") as string,
+          
+          // 🎨 Images et branding
+          logoUrl: formData.get("logoUrl") as string,
+          bannerUrl: formData.get("bannerUrl") as string,
+        };
+
+        console.log("💾 Données loyalty à sauvegarder:", personalizationData);
+        
+        const loyaltyProgram = await prisma.loyaltyProgram.update({
+          where: { id: loyaltyProgramId },
+          data: personalizationData as any,
+        });
+
+        console.log("✅ Loyalty program mis à jour:", loyaltyProgram.id);
+        return json({ success: true, loyaltyProgram });
+      }
+
+      case "update_loyalty_rewards": {
+        const loyaltyProgramId = formData.get("loyaltyProgramId") as string;
+        const rewardsData = JSON.parse(formData.get("rewards") as string);
+        const tiersData = JSON.parse(formData.get("tiers") as string);
+        
+        console.log("🎁 Mise à jour des récompenses loyalty:", loyaltyProgramId);
+        console.log("🏆 Données paliers:", tiersData);
+        
+        // Mettre à jour le champ rewards avec la nouvelle structure simplifiée
+        const updatedRewards = {
+          tiers: tiersData
+        };
+        
+        const loyaltyProgram = await prisma.loyaltyProgram.update({
+          where: { id: loyaltyProgramId },
+          data: {
+            rewards: updatedRewards
+          }
+        });
+
+        console.log("✅ Récompenses loyalty mises à jour:", loyaltyProgram.id);
+        
+        // Sauvegarder les templates de récompenses fonctionnelles
+        await saveRewardTemplates(merchant.id, tiersData);
+        
+        // Recharger les données mises à jour
+        const updatedLoyaltyProgram = await prisma.loyaltyProgram.findUnique({
+          where: { id: loyaltyProgramId }
+        });
+        
+        return json({ 
+          success: true, 
+          loyaltyProgram: updatedLoyaltyProgram,
+          message: "Récompenses mises à jour avec succès !"
+        });
+      }
+
+      case "get_loyalty_qr_code": {
+        // Trouver le QR code de type LOYALTY pour ce marchand
+        let qrCode = await prisma.qRCode.findFirst({
+          where: {
+            merchantId: merchant.id,
+            type: "LOYALTY",
+            active: true
+          }
+        });
+
+        // Si aucun QR code LOYALTY n'existe, en créer un
+        if (!qrCode) {
+          const loyaltyProgram = await prisma.loyaltyProgram.findFirst({
+            where: { merchantId: merchant.id }
+          });
+
+          if (loyaltyProgram) {
+            qrCode = await prisma.qRCode.create({
+              data: {
+                merchantId: merchant.id,
+                title: "Programme de fidélité",
+                type: "LOYALTY",
+                destination: `/loyalty/${loyaltyProgram.id}`,
+                slug: `loyalty-${loyaltyProgram.id}`,
+                active: true
+              }
+            });
+          }
+        }
+
+        if (qrCode) {
+          return json({ success: true, qrCode });
+        } else {
+          return json({ success: false, error: "No loyalty QR code found and could not create one" });
+        }
+      }
+
       default:
         return json({ error: "Invalid action" }, { status: 400 });
     }
@@ -185,12 +384,135 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function LoyaltyRoute() {
-  const { shop, loyaltyPrograms, customerPoints } = useLoaderData<typeof loader>();
+  const { shop, loyaltyPrograms, customerPoints, rewardTemplates } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const [searchTerm, setSearchTerm] = useState('');
   const [tierFilter, setTierFilter] = useState('all');
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isPersonalizationModalOpen, setIsPersonalizationModalOpen] = useState(false);
+  const [isRewardsModalOpen, setIsRewardsModalOpen] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [previewSuccess, setPreviewSuccess] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
+
+  // Handlers pour la personnalisation
+  const handlePersonalizationSave = (data: any) => {
+    const formData = new FormData();
+    formData.append('action', 'update_loyalty_personalization');
+    formData.append('loyaltyProgramId', loyaltyPrograms[0]?.id || '');
+    
+    // Ajouter toutes les données de personnalisation
+    Object.keys(data).forEach(key => {
+      if (Array.isArray(data[key])) {
+        formData.append(key, JSON.stringify(data[key]));
+      } else {
+        formData.append(key, data[key]);
+      }
+    });
+
+    fetch('/app/loyalty', {
+      method: 'POST',
+      body: formData,
+    }).then(() => {
+      success('Personnalisation sauvegardée !', 'Vos modifications ont été enregistrées avec succès');
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 3000);
+    }).catch(() => {
+      error('Erreur', 'Impossible de sauvegarder la personnalisation');
+    });
+  };
+
+  const handlePersonalizationSaveForPreview = (data: any) => {
+    console.log("💾 Sauvegarde pour aperçu loyalty...");
+    
+    // Sauvegarder d'abord, puis ouvrir l'aperçu
+    const formData = new FormData();
+    formData.append('action', 'update_loyalty_personalization');
+    formData.append('loyaltyProgramId', loyaltyPrograms[0]?.id || '');
+    
+    // Ajouter toutes les données de personnalisation
+    Object.keys(data).forEach(key => {
+      if (Array.isArray(data[key])) {
+        formData.append(key, JSON.stringify(data[key]));
+      } else {
+        formData.append(key, data[key]);
+      }
+    });
+
+    fetch('/app/loyalty', {
+      method: 'POST',
+      body: formData,
+    }).then((response) => {
+      console.log("✅ Sauvegarde loyalty terminée, ouverture de l'aperçu...");
+      success('Aperçu généré !', 'La page loyalty s\'ouvre dans un nouvel onglet');
+      // Après sauvegarde, ouvrir l'aperçu
+      handlePersonalizationPreview();
+    }).catch((error) => {
+      console.error("❌ Erreur lors de la sauvegarde:", error);
+      error('Erreur', 'Impossible de sauvegarder pour l\'aperçu');
+      // Ouvrir l'aperçu même en cas d'erreur
+      handlePersonalizationPreview();
+    });
+  };
+
+  const handlePersonalizationPreview = async () => {
+    const programId = loyaltyPrograms[0]?.id;
+    console.log("🔍 Tentative d'ouverture de l'aperçu loyalty avec l'ID:", programId);
+    
+    if (!programId) {
+      console.error("❌ Aucun programme de fidélité trouvé");
+      error("Aucun programme de fidélité trouvé", "Veuillez d'abord créer un programme de fidélité.");
+      return;
+    }
+
+    try {
+      // Vérifier si un QR code LOYALTY existe déjà
+      const response = await fetch('/app/loyalty', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: 'action=get_loyalty_qr_code'
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.qrCode) {
+        const loyaltyUrl = `/loyalty/${data.qrCode.slug}`;
+        console.log("🔗 URL loyalty (QR code existant):", loyaltyUrl);
+        window.open(loyaltyUrl, '_blank');
+      } else {
+        // Fallback: utiliser l'ID du programme directement
+        const loyaltyUrl = `/loyalty/${programId}`;
+        console.log("🔗 URL loyalty (fallback):", loyaltyUrl);
+        window.open(loyaltyUrl, '_blank');
+      }
+      
+      setPreviewSuccess(true);
+      setTimeout(() => setPreviewSuccess(false), 3000);
+    } catch (error) {
+      console.error("❌ Erreur lors de l'aperçu:", error);
+      // Fallback: utiliser l'ID du programme directement
+      const loyaltyUrl = `/loyalty/${programId}`;
+      console.log("🔗 URL loyalty (fallback après erreur):", loyaltyUrl);
+      window.open(loyaltyUrl, '_blank');
+      
+      setPreviewSuccess(true);
+      setTimeout(() => setPreviewSuccess(false), 3000);
+    }
+  };
+
+  const handleRewardsSave = (rewardsData: any, tiers: any) => {
+    const formData = new FormData();
+    formData.append('action', 'update_loyalty_rewards');
+    formData.append('loyaltyProgramId', loyaltyPrograms[0]?.id || '');
+    formData.append('rewards', JSON.stringify(rewardsData));
+    formData.append('tiers', JSON.stringify(tiers));
+    
+    submit(formData, { method: 'post' });
+    setIsRewardsModalOpen(false);
+    success('Récompenses sauvegardées', 'Les récompenses ont été mises à jour avec succès');
+  };
+
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [newMemberData, setNewMemberData] = useState({
     name: '',
@@ -199,35 +521,87 @@ export default function LoyaltyRoute() {
     points: 0
   });
 
+  // Notifications
+  const { success, error, info } = useQuickNotifications();
+
   const isLoading = navigation.state === "loading";
   const submit = useSubmit();
 
-  const handleAddMember = () => {
-    if (!newMemberData.name || !newMemberData.email) {
-      alert('Veuillez remplir tous les champs obligatoires');
-      return;
-    }
+  // Handler pour supprimer un programme
+  const handleDeleteProgram = () => {
+    setIsDeleteConfirmOpen(true);
+  };
 
-    // Calculate initial points based on tier
-    const tierPoints = {
-      bronze: 0,
-      silver: 100,
-      gold: 500,
-      platinum: 1000
-    };
-
+  const confirmDeleteProgram = () => {
+    const programName = loyaltyPrograms[0]?.name || 'ce programme';
+    
     const formData = new FormData();
-    formData.append("action", "add_customer_points");
-    formData.append("customerId", newMemberData.email);
-    formData.append("points", (tierPoints[newMemberData.tier as keyof typeof tierPoints] + newMemberData.points).toString());
-    formData.append("name", newMemberData.name);
-    formData.append("tier", newMemberData.tier);
+    formData.append("action", "delete_loyalty_program");
+    formData.append("id", loyaltyPrograms[0]?.id || '');
 
     submit(formData, { method: "post" });
     
-    // Reset form and close modal
-    setNewMemberData({ name: '', email: '', tier: 'bronze', points: 0 });
-    setIsCreateModalOpen(false);
+    // Show success notification
+    success('Programme supprimé !', `"${programName}" a été supprimé avec succès`);
+    
+    // Close confirmation dialog
+    setIsDeleteConfirmOpen(false);
+  };
+
+  const handleAddMember = () => {
+    if (loyaltyPrograms.length === 0) {
+      // Créer un programme de fidélité
+      if (!newMemberData.name) {
+        error('Erreur', 'Veuillez remplir le nom du programme');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("action", "create_loyalty_program");
+      formData.append("name", newMemberData.name);
+      formData.append("description", newMemberData.email); // Utilise le champ email pour la description
+      formData.append("pointsPerScan", newMemberData.points.toString());
+      formData.append("isActive", "true");
+
+      submit(formData, { method: "post" });
+      
+      // Show success notification
+      success('Programme créé !', 'Votre programme de fidélité a été créé avec succès');
+      
+      // Reset form and close modal
+      setNewMemberData({ name: '', email: '', tier: 'bronze', points: 0 });
+      setIsCreateModalOpen(false);
+    } else {
+      // Ajouter un membre
+      if (!newMemberData.name || !newMemberData.email) {
+        error('Erreur', 'Veuillez remplir tous les champs obligatoires');
+        return;
+      }
+
+      // Calculate initial points based on tier
+      const tierPoints = {
+        bronze: 0,
+        silver: 100,
+        gold: 500,
+        platinum: 1000
+      };
+
+      const formData = new FormData();
+      formData.append("action", "add_customer_points");
+      formData.append("customerId", newMemberData.email);
+      formData.append("points", (tierPoints[newMemberData.tier as keyof typeof tierPoints] + newMemberData.points).toString());
+      formData.append("name", newMemberData.name);
+      formData.append("tier", newMemberData.tier);
+
+      submit(formData, { method: "post" });
+      
+      // Show success notification
+      success('Membre ajouté !', `${newMemberData.name} a été ajouté au programme de fidélité`);
+      
+      // Reset form and close modal
+      setNewMemberData({ name: '', email: '', tier: 'bronze', points: 0 });
+      setIsCreateModalOpen(false);
+    }
   };
 
   useEffect(() => {
@@ -244,9 +618,9 @@ export default function LoyaltyRoute() {
   // Show success message when member is added
   useEffect(() => {
     if (actionData && 'success' in actionData && actionData.success) {
-      alert('Membre ajouté avec succès !');
+      success('Membre ajouté !', 'Le membre a été ajouté au programme de fidélité');
     }
-  }, [actionData]);
+  }, [actionData, success]);
 
   // Calculate summary stats from real data
   const summary = {
@@ -262,13 +636,42 @@ export default function LoyaltyRoute() {
     averagePointsPerMember: customerPoints.length > 0 ? customerPoints.reduce((sum, cp) => sum + cp.points, 0) / customerPoints.length : 0,
   };
 
-  // Define tiers
-  const tiers = [
-    { name: 'Bronze', minPoints: 0, maxPoints: 999, color: 'from-amber-500 to-amber-600', bgColor: 'bg-amber-50', iconColor: 'text-amber-600' },
-    { name: 'Silver', minPoints: 1000, maxPoints: 2499, color: 'from-gray-400 to-gray-500', bgColor: 'bg-gray-50', iconColor: 'text-gray-600' },
-    { name: 'Gold', minPoints: 2500, maxPoints: 9999, color: 'from-yellow-400 to-yellow-500', bgColor: 'bg-yellow-50', iconColor: 'text-yellow-600' },
-    { name: 'Platinum', minPoints: 10000, maxPoints: 99999, color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50', iconColor: 'text-purple-600' },
-  ];
+  // Define tiers dynamically from reward templates
+  const tiers = (() => {
+    // Grouper les récompenses par tier
+    const tiersMap = new Map();
+    rewardTemplates.forEach(reward => {
+      if (!tiersMap.has(reward.tier)) {
+        tiersMap.set(reward.tier, []);
+      }
+      tiersMap.get(reward.tier).push(reward);
+    });
+
+    // Configuration des tiers avec leurs récompenses
+    const tierOrder = ['Bronze', 'Silver', 'Gold', 'Platinum'];
+    const tierConfig = {
+      Bronze: { minPoints: 0, maxPoints: 999, color: 'from-amber-500 to-amber-600', bgColor: 'bg-amber-50', iconColor: 'text-amber-600' },
+      Silver: { minPoints: 1000, maxPoints: 2499, color: 'from-gray-400 to-gray-500', bgColor: 'bg-gray-50', iconColor: 'text-gray-600' },
+      Gold: { minPoints: 2500, maxPoints: 9999, color: 'from-yellow-400 to-yellow-500', bgColor: 'bg-yellow-50', iconColor: 'text-yellow-600' },
+      Platinum: { minPoints: 10000, maxPoints: 99999, color: 'from-purple-500 to-purple-600', bgColor: 'bg-purple-50', iconColor: 'text-purple-600' },
+    };
+
+    return tierOrder.map(tierName => {
+      const rewards = tiersMap.get(tierName) || [];
+      const config = tierConfig[tierName as keyof typeof tierConfig];
+      
+      return {
+        name: tierName,
+        minPoints: config.minPoints,
+        maxPoints: config.maxPoints,
+        color: config.color,
+        bgColor: config.bgColor,
+        iconColor: config.iconColor,
+        rewards: rewards,
+        rewardCount: rewards.length
+      };
+    });
+  })();
 
   // Transform customer points to members format
   const members = customerPoints.map(cp => {
@@ -378,15 +781,61 @@ export default function LoyaltyRoute() {
                   Gérez votre programme de fidélité QR
                 </p>
               </div>
-              <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-                <Button 
-                  onClick={() => setIsCreateModalOpen(true)}
-                  className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nouveau membre
-                </Button>
-              </motion.div>
+              <div className="flex space-x-3">
+                {loyaltyPrograms.length === 0 ? (
+                  <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                    <Button 
+                      onClick={() => setIsCreateModalOpen(true)}
+                      className="flex items-center space-x-2"
+                    >
+                      <Plus className="h-4 w-4" />
+                      <span>Créer un programme</span>
+                    </Button>
+                  </motion.div>
+                ) : (
+                  <>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button 
+                        onClick={() => setIsPersonalizationModalOpen(true)}
+                        variant="outline"
+                        className="flex items-center space-x-2"
+                      >
+                        <Edit className="h-4 w-4" />
+                        <span>Personnaliser</span>
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button 
+                        onClick={() => setIsRewardsModalOpen(true)}
+                        variant="outline"
+                        className="flex items-center space-x-2"
+                      >
+                        <Gift className="h-4 w-4" />
+                        <span>Récompenses</span>
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button 
+                        onClick={() => handleDeleteProgram()}
+                        variant="outline"
+                        className="flex items-center space-x-2 text-red-600 border-red-300 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        <span>Supprimer</span>
+                      </Button>
+                    </motion.div>
+                    <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                      <Button 
+                        onClick={() => setIsCreateModalOpen(true)}
+                        className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nouveau membre
+                      </Button>
+                    </motion.div>
+                  </>
+                )}
+              </div>
             </div>
           </motion.div>
 
@@ -484,6 +933,34 @@ export default function LoyaltyRoute() {
                               {percentage.toFixed(1)}%
                             </span>
                           </div>
+                          
+                          {/* Afficher les récompenses disponibles */}
+                          <div className="mt-3 pt-2 border-t border-gray-200 dark:border-gray-600">
+                            <div className="flex justify-between text-xs mb-1">
+                              <span className={isDarkMode ? 'text-gray-400' : 'text-gray-500'}>Récompenses</span>
+                              <span className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                                {tier.rewardCount}
+                              </span>
+                            </div>
+                            {tier.rewards && tier.rewards.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {tier.rewards.slice(0, 3).map((reward: any, i: number) => (
+                                  <Badge key={i} variant="secondary" className="text-xs">
+                                    {(reward.value as any)?.title || reward.rewardType}
+                                  </Badge>
+                                ))}
+                                {tier.rewards.length > 3 && (
+                                  <Badge variant="outline" className="text-xs">
+                                    +{tier.rewards.length - 3}
+                                  </Badge>
+                                )}
+                              </div>
+                            ) : (
+                              <p className={`text-xs ${isDarkMode ? 'text-gray-500' : 'text-gray-400'}`}>
+                                Aucune récompense configurée
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </motion.div>
                     );
@@ -523,9 +1000,9 @@ export default function LoyaltyRoute() {
           {filteredMembers.length === 0 ? (
             <EmptyState
               icon={<Users className="h-12 w-12" />}
-              title="Aucun membre trouvé"
-              description="Commencez par ajouter des membres à votre programme"
-              action={{
+              title={loyaltyPrograms.length === 0 ? "Aucun programme de fidélité" : "Aucun membre trouvé"}
+              description={loyaltyPrograms.length === 0 ? "Créez d'abord un programme de fidélité pour commencer" : "Commencez par ajouter des membres à votre programme"}
+              action={loyaltyPrograms.length === 0 ? undefined : {
                 label: "Ajouter un membre",
                 onClick: () => setIsCreateModalOpen(true)
               }}
@@ -637,58 +1114,103 @@ export default function LoyaltyRoute() {
           <Modal
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
-            title="Ajouter un nouveau membre"
+            title={loyaltyPrograms.length === 0 ? "Créer un programme de fidélité" : "Ajouter un nouveau membre"}
           >
             <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Nom du membre *
-                </label>
-                <Input
-                  value={newMemberData.name}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, name: e.target.value })}
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Email *
-                </label>
-                <Input
-                  type="email"
-                  value={newMemberData.email}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, email: e.target.value })}
-                  placeholder="john@example.com"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Niveau initial
-                </label>
-                <Select
-                  value={newMemberData.tier}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, tier: e.target.value })}
-                >
-                  <option value="bronze">Bronze (0 points)</option>
-                  <option value="silver">Silver (100 points)</option>
-                  <option value="gold">Gold (500 points)</option>
-                  <option value="platinum">Platinum (1000 points)</option>
-                </Select>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Points bonus (optionnel)
-                </label>
-                <Input
-                  type="number"
-                  value={newMemberData.points}
-                  onChange={(e) => setNewMemberData({ ...newMemberData, points: parseInt(e.target.value) || 0 })}
-                  placeholder="0"
-                  min="0"
-                />
-              </div>
+              {loyaltyPrograms.length === 0 ? (
+                // Formulaire de création de programme de fidélité
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nom du programme *
+                    </label>
+                    <Input
+                      value={newMemberData.name}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, name: e.target.value })}
+                      placeholder="Mon programme de fidélité"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
+                    <Input
+                      value={newMemberData.email}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, email: e.target.value })}
+                      placeholder="Description du programme..."
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Points par scan
+                    </label>
+                    <Input
+                      type="number"
+                      value={newMemberData.points}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, points: parseInt(e.target.value) || 0 })}
+                      placeholder="10"
+                    />
+                  </div>
+                </>
+              ) : (
+                // Formulaire d'ajout de membre
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Nom du membre *
+                    </label>
+                    <Input
+                      value={newMemberData.name}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, name: e.target.value })}
+                      placeholder="John Doe"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email *
+                    </label>
+                    <Input
+                      type="email"
+                      value={newMemberData.email}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, email: e.target.value })}
+                      placeholder="john@example.com"
+                      required
+                    />
+                  </div>
+                </>
+              )}
+              {loyaltyPrograms.length > 0 && (
+                <>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Niveau initial
+                    </label>
+                    <Select
+                      value={newMemberData.tier}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, tier: e.target.value })}
+                    >
+                      <option value="bronze">Bronze (0 points)</option>
+                      <option value="silver">Silver (100 points)</option>
+                      <option value="gold">Gold (500 points)</option>
+                      <option value="platinum">Platinum (1000 points)</option>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Points bonus (optionnel)
+                    </label>
+                    <Input
+                      type="number"
+                      value={newMemberData.points}
+                      onChange={(e) => setNewMemberData({ ...newMemberData, points: parseInt(e.target.value) || 0 })}
+                      placeholder="0"
+                      min="0"
+                    />
+                  </div>
+                </>
+              )}
               <div className="flex justify-end space-x-3 pt-4">
                 <Button
                   variant="outline"
@@ -704,12 +1226,116 @@ export default function LoyaltyRoute() {
                   className="bg-gradient-to-r from-blue-500 to-purple-600 text-white border-0"
                   disabled={isLoading}
                 >
-                  {isLoading ? "Ajout..." : "Ajouter"}
+                  {isLoading ? (loyaltyPrograms.length === 0 ? "Création..." : "Ajout...") : (loyaltyPrograms.length === 0 ? "Créer le programme" : "Ajouter")}
                 </Button>
               </div>
             </div>
           </Modal>
+
+          {/* Modal de gestion des récompenses */}
+          <Modal
+            isOpen={isRewardsModalOpen}
+            onClose={() => setIsRewardsModalOpen(false)}
+            title="Gérer les récompenses"
+            size="2xl"
+          >
+            <LoyaltyRewardsManager
+              merchantId={loyaltyPrograms[0]?.merchantId || ''}
+            />
+          </Modal>
+
+          {/* Modal de personnalisation */}
+          <Modal
+            isOpen={isPersonalizationModalOpen}
+            onClose={() => setIsPersonalizationModalOpen(false)}
+            title="Personnaliser la page loyalty"
+            size="2xl"
+          >
+            <LoyaltyPersonalization
+              loyaltyProgram={loyaltyPrograms[0]}
+              onSave={handlePersonalizationSave}
+              onSaveForPreview={handlePersonalizationSaveForPreview}
+              onPreview={handlePersonalizationPreview}
+              onClose={() => setIsPersonalizationModalOpen(false)}
+              isLoading={navigation.state === "submitting"}
+              saveSuccess={saveSuccess}
+              previewSuccess={previewSuccess}
+            />
+          </Modal>
+
+          {/* Confirmation de suppression */}
+          <ConfirmDialog
+            isOpen={isDeleteConfirmOpen}
+            onClose={() => setIsDeleteConfirmOpen(false)}
+            onConfirm={confirmDeleteProgram}
+            title="Supprimer le programme de fidélité"
+            message={`Êtes-vous sûr de vouloir supprimer "${loyaltyPrograms[0]?.name || 'ce programme'}" ?\n\nCette action supprimera définitivement :\n• Le programme de fidélité\n• Tous les points des clients (${customerPoints.length} membres)\n• Tous les templates de récompenses\n• Toutes les récompenses clients actives\n• Tous les codes de réduction Shopify générés\n• Les QR codes associés\n\nCette action est irréversible.`}
+            confirmText="Supprimer définitivement"
+            cancelText="Annuler"
+            type="danger"
+            isLoading={navigation.state === "submitting"}
+          />
         </div>
     </Page>
   );
+}
+
+/**
+ * Sauvegarder les templates de récompenses fonctionnelles
+ */
+async function saveRewardTemplates(merchantId: string, tiersData: any[]) {
+  try {
+    console.log("💾 Sauvegarde des templates de récompenses...");
+    
+    for (const tier of tiersData) {
+      if (tier.rewards && tier.rewards.length > 0) {
+        for (const reward of tier.rewards) {
+          if (reward.isActive) {
+            // Sauvegarder ou mettre à jour le template
+            await prisma.rewardTemplates.upsert({
+              where: {
+                merchantId_tier_rewardType: {
+                  merchantId,
+                  tier: tier.name,
+                  rewardType: reward.type
+                }
+              },
+              update: {
+                value: reward.config,
+                isActive: reward.isActive,
+                updatedAt: new Date()
+              },
+              create: {
+                merchantId,
+                tier: tier.name,
+                rewardType: reward.type,
+                value: reward.config,
+                isActive: reward.isActive
+              }
+            });
+            
+            console.log(`✅ Template sauvegardé: ${tier.name} - ${reward.type}`);
+          } else {
+            // Désactiver le template
+            await prisma.rewardTemplates.updateMany({
+              where: {
+                merchantId,
+                tier: tier.name,
+                rewardType: reward.type
+              },
+              data: {
+                isActive: false,
+                updatedAt: new Date()
+              }
+            });
+          }
+        }
+      }
+    }
+    
+    console.log("🎉 Tous les templates de récompenses sauvegardés !");
+  } catch (error) {
+    console.error("❌ Erreur sauvegarde templates:", error);
+    throw error;
+  }
 }

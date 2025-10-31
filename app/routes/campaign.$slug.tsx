@@ -6,6 +6,11 @@ import { Button } from "~/components/ui/Button";
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card";
 import { Input } from "~/components/ui/Input";
 import { Badge } from "~/components/ui/Badge";
+import type { LinksFunction } from "@remix-run/node";
+
+export const links: LinksFunction = () => [
+  { rel: "stylesheet", href: "/fonts.css" },
+];
 import { 
   Gift, 
   Star, 
@@ -131,6 +136,13 @@ export default function CampaignPage() {
   const [phone, setPhone] = useState("");
   const [isSubscribed, setIsSubscribed] = useState(false);
 
+  // Log des données de campagne pour déboguer
+  console.log("🎨 Campaign data reçue:", campaign);
+  console.log("🎨 Featured Products:", (campaign as any).featuredProducts);
+  console.log("🎨 Special Offers:", (campaign as any).specialOffers);
+  console.log("🎨 Primary Color:", (campaign as any).primaryColor);
+  console.log("🎨 Primary Gradient:", (campaign as any).primaryColorGradient);
+
   const handleSubscribe = (e: React.FormEvent) => {
     e.preventDefault();
     if (email) {
@@ -163,26 +175,185 @@ export default function CampaignPage() {
 
   const campaignStatus = getCampaignStatus();
 
+  // Log des données de la campagne pour déboguer
+  console.log("🎨 Campaign data:", {
+    primaryColor: (campaign as any).primaryColor,
+    primaryColorGradient: (campaign as any).primaryColorGradient,
+    primaryGradientColors: (campaign as any).primaryGradientColors,
+    ctaButtonColor: (campaign as any).ctaButtonColor,
+    ctaButtonColorGradient: (campaign as any).ctaButtonColorGradient,
+    ctaButtonColorGradientColors: (campaign as any).ctaButtonColorGradientColors,
+    cardBackgroundColor: (campaign as any).cardBackgroundColor,
+    cardBackgroundGradient: (campaign as any).cardBackgroundGradient,
+    cardBackgroundGradientColors: (campaign as any).cardBackgroundGradientColors,
+  });
+
   // Styles personnalisés basés sur la campagne
   const customStyles = {
     primaryColor: (campaign as any).primaryColor || '#007b5c',
+    primaryColorGradient: (campaign as any).primaryColorGradient || false,
+    primaryGradientColors: (campaign as any).primaryGradientColors || ['#007b5c', '#00a86b'],
+    primaryGradientDirection: (campaign as any).primaryGradientDirection || 'to right',
     secondaryColor: (campaign as any).secondaryColor || '#ffffff',
+    secondaryColorGradient: (campaign as any).secondaryColorGradient || false,
+    secondaryGradientColors: (campaign as any).secondaryGradientColors || ['#ffffff', '#f0f0f0'],
+    secondaryGradientDirection: (campaign as any).secondaryGradientDirection || 'to right',
     backgroundColor: (campaign as any).backgroundColor || '#f8f9fa',
+    backgroundColorGradient: (campaign as any).backgroundColorGradient || false,
+    backgroundGradientColors: (campaign as any).backgroundGradientColors || ['#f8f9fa', '#e9ecef'],
+    backgroundGradientDirection: (campaign as any).backgroundGradientDirection || 'to right',
     fontFamily: (campaign as any).fontFamily || 'Inter',
+    fontSize: (campaign as any).fontSize || 16,
+    fontWeight: (campaign as any).fontWeight || 'normal',
     ctaButtonColor: (campaign as any).ctaButtonColor || '#007b5c',
+    ctaButtonColorGradient: (campaign as any).ctaButtonColorGradient || false,
+    ctaButtonColorGradientColors: (campaign as any).ctaButtonColorGradientColors || ['#007b5c', '#00a86b'],
+    ctaButtonColorGradientDirection: (campaign as any).ctaButtonColorGradientDirection || 'to right',
+    backgroundImage: (campaign as any).backgroundImage || null,
+    // 🎨 Personnalisation des cartes
+    cardBackgroundColor: (campaign as any).cardBackgroundColor || '#ffffff',
+    cardBackgroundGradient: (campaign as any).cardBackgroundGradient || false,
+    cardBackgroundGradientColors: (campaign as any).cardBackgroundGradientColors || ['#ffffff', '#f8f9fa'],
+    cardBackgroundGradientDirection: (campaign as any).cardBackgroundGradientDirection || 'to right',
+    cardBorderColor: (campaign as any).cardBorderColor || '#e5e7eb',
+    cardBorderWidth: (campaign as any).cardBorderWidth || 1,
+    cardBorderRadius: (campaign as any).cardBorderRadius || 8,
+    cardShadow: (campaign as any).cardShadow || 'lg',
+    // 🎨 Personnalisation des mini-cartes
+    miniCardBackgroundColor: (campaign as any).miniCardBackgroundColor || '#ffffff',
+    miniCardBackgroundGradient: (campaign as any).miniCardBackgroundGradient || false,
+    miniCardBackgroundGradientColors: (campaign as any).miniCardBackgroundGradientColors || ['#ffffff', '#f8f9fa'],
+    miniCardBackgroundGradientDirection: (campaign as any).miniCardBackgroundGradientDirection || 'to right',
+    miniCardBorderColor: (campaign as any).miniCardBorderColor || '#e5e7eb',
+    miniCardBorderWidth: (campaign as any).miniCardBorderWidth || 1,
+    miniCardBorderRadius: (campaign as any).miniCardBorderRadius || 8,
+    miniCardShadow: (campaign as any).miniCardShadow || 'md',
+  };
+
+  // Fonction pour obtenir le style de couleur (simple ou dégradé)
+  const getColorStyle = (colorType: 'primary' | 'secondary' | 'background') => {
+    const gradient = customStyles[`${colorType}ColorGradient` as keyof typeof customStyles] as boolean;
+    const colors = customStyles[`${colorType}GradientColors` as keyof typeof customStyles] as string[];
+    const direction = customStyles[`${colorType}GradientDirection` as keyof typeof customStyles] as string;
+    const simpleColor = customStyles[`${colorType}Color` as keyof typeof customStyles] as string;
+    
+    if (gradient && colors && colors.length > 1) {
+      return {
+        background: `linear-gradient(${direction}, ${colors.join(', ')})`,
+        WebkitBackgroundClip: 'text',
+        WebkitTextFillColor: 'transparent',
+        backgroundClip: 'text',
+        color: 'transparent'
+      };
+    }
+    return { color: simpleColor };
+  };
+
+  // Fonction pour obtenir le style de fond (simple ou dégradé)
+  const getBackgroundStyle = (colorType: 'primary' | 'secondary' | 'background') => {
+    const gradient = customStyles[`${colorType}ColorGradient` as keyof typeof customStyles] as boolean;
+    const colors = customStyles[`${colorType}GradientColors` as keyof typeof customStyles] as string[];
+    const direction = customStyles[`${colorType}GradientDirection` as keyof typeof customStyles] as string;
+    const simpleColor = customStyles[`${colorType}Color` as keyof typeof customStyles] as string;
+    
+    if (gradient && colors && colors.length > 1) {
+      return {
+        background: `linear-gradient(${direction}, ${colors.join(', ')})`
+      };
+    }
+    return { backgroundColor: simpleColor };
+  };
+
+  // Fonction pour obtenir le style du bouton CTA (simple ou dégradé)
+  const getCTAButtonStyle = () => {
+    const color = customStyles.ctaButtonColor;
+    
+    console.log("🎨 CTA Button - Color:", color);
+    
+    // Le CSS généré est déjà dans ctaButtonColor
+    return { 
+      background: color,
+      border: 'none'
+    };
+  };
+
+  // Fonction pour obtenir le style des cartes
+  const getCardStyle = () => {
+    const background = customStyles.cardBackgroundColor;
+    
+    console.log("🎨 Cartes - Background:", background);
+
+    const shadowMap = {
+      'none': 'none',
+      'sm': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+      'md': '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+      'lg': '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+      'xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)'
+    };
+
+    return {
+      background,
+      borderColor: customStyles.cardBorderColor,
+      borderWidth: `${customStyles.cardBorderWidth}px`,
+      borderRadius: `${customStyles.cardBorderRadius}px`,
+      boxShadow: shadowMap[customStyles.cardShadow as keyof typeof shadowMap] || shadowMap.lg
+    };
+  };
+
+  // Fonction pour obtenir le style des mini-cartes (produits et offres)
+  const getMiniCardStyle = () => {
+    const background = customStyles.miniCardBackgroundColor;
+    
+    console.log("🎨 Mini-cartes - Background:", background);
+
+    const shadowMap = {
+      'none': 'none',
+      'sm': '0 1px 2px 0 rgb(0 0 0 / 0.05)',
+      'md': '0 4px 6px -1px rgb(0 0 0 / 0.1)',
+      'lg': '0 10px 15px -3px rgb(0 0 0 / 0.1)',
+      'xl': '0 25px 50px -12px rgb(0 0 0 / 0.25)'
+    };
+
+    return {
+      background,
+      borderColor: customStyles.miniCardBorderColor,
+      borderWidth: `${customStyles.miniCardBorderWidth}px`,
+      borderRadius: `${customStyles.miniCardBorderRadius}px`,
+      boxShadow: shadowMap[customStyles.miniCardShadow as keyof typeof shadowMap] || shadowMap.md
+    };
   };
 
   return (
     <div 
       className="min-h-screen"
       style={{ 
-        backgroundColor: customStyles.backgroundColor,
+        ...getBackgroundStyle('background'),
+        ...(customStyles.backgroundImage && {
+          backgroundImage: `url(${customStyles.backgroundImage})`,
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          backgroundRepeat: 'no-repeat'
+        }),
         fontFamily: customStyles.fontFamily,
+        fontSize: `${customStyles.fontSize}px`,
+        fontWeight: customStyles.fontWeight
       }}
     >
       <div className="max-w-6xl mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
+          {/* Bannière personnalisée */}
+          {(campaign as any).bannerUrl && (
+            <div className="mb-6">
+              <img 
+                src={(campaign as any).bannerUrl} 
+                alt={`Bannière ${campaign.name}`}
+                className="w-full max-w-4xl mx-auto rounded-lg shadow-lg object-cover"
+                style={{ maxHeight: '300px' }}
+              />
+            </div>
+          )}
+          
           {(campaign as any).logoUrl ? (
             <img 
               src={(campaign as any).logoUrl} 
@@ -199,7 +370,7 @@ export default function CampaignPage() {
           )}
           <h1 
             className="text-4xl font-bold mb-2"
-            style={{ color: customStyles.primaryColor }}
+            style={getColorStyle('primary')}
           >
             {campaign.name}
           </h1>
@@ -209,7 +380,7 @@ export default function CampaignPage() {
           {(campaign as any).mainOffer && (
             <div 
               className="inline-block px-6 py-3 rounded-full text-white font-semibold mb-4"
-              style={{ backgroundColor: customStyles.primaryColor }}
+              style={getBackgroundStyle('primary')}
             >
               {(campaign as any).mainOffer}
             </div>
@@ -244,90 +415,115 @@ export default function CampaignPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Campaign Content */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Campaign Highlights */}
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Sparkles className="h-5 w-5 mr-2 text-purple-600" />
-                  Offres exceptionnelles
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <Star className="h-5 w-5 text-yellow-500 mr-2" />
-                      <h3 className="font-semibold">Réduction jusqu'à -70%</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">Sur une sélection de produits</p>
+            {/* Special Offers */}
+            {(campaign as any).specialOffers && (campaign as any).specialOffers.length > 0 && (
+              <Card 
+                className="backdrop-blur-sm"
+                style={getCardStyle()}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Sparkles className="h-5 w-5 mr-2 text-yellow-600" />
+                    Offres exceptionnelles
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(campaign as any).specialOffers
+                      .filter((offer: any) => offer.enabled)
+                      .map((offer: any, index: number) => (
+                      <div 
+                        key={index} 
+                        className="p-4 hover:shadow-md transition-shadow"
+                        style={getMiniCardStyle()}
+                      >
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="font-semibold text-lg">{offer.title}</h4>
+                          <span 
+                            className="px-3 py-1 rounded-full text-sm font-medium"
+                            style={{ 
+                              backgroundColor: offer.color + '20', 
+                              color: offer.color 
+                            }}
+                          >
+                            Spécial
+                          </span>
+                        </div>
+                        <p className="text-gray-600 mb-3">{offer.description}</p>
+                        <div className="flex items-center text-sm text-gray-500">
+                          <Clock className="h-4 w-4 mr-1" />
+                          Offre limitée
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                  <div className="p-4 bg-gradient-to-r from-blue-50 to-cyan-50 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <Gift className="h-5 w-5 text-blue-500 mr-2" />
-                      <h3 className="font-semibold">Cadeaux offerts</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">Avec tout achat supérieur à 50€</p>
-                  </div>
-                  <div className="p-4 bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <Zap className="h-5 w-5 text-green-500 mr-2" />
-                      <h3 className="font-semibold">Livraison gratuite</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">Sur toute la France métropolitaine</p>
-                  </div>
-                  <div className="p-4 bg-gradient-to-r from-orange-50 to-red-50 rounded-lg">
-                    <div className="flex items-center mb-2">
-                      <Clock className="h-5 w-5 text-orange-500 mr-2" />
-                      <h3 className="font-semibold">Offres limitées</h3>
-                    </div>
-                    <p className="text-sm text-gray-600">Quantités limitées, dépêchez-vous !</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Featured Products */}
-            <Card className="shadow-lg">
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Target className="h-5 w-5 mr-2 text-green-600" />
-                  Produits vedettes
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-                    <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                      <Gift className="h-12 w-12 text-gray-400" />
-                    </div>
-                    <h4 className="font-semibold mb-1">Produit Premium</h4>
-                    <p className="text-sm text-gray-600 mb-2">Description du produit</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-purple-600">29,99€</span>
-                      <span className="text-sm text-gray-500 line-through">59,99€</span>
-                    </div>
+            {(campaign as any).featuredProducts && (campaign as any).featuredProducts.length > 0 && (
+              <Card 
+                className="backdrop-blur-sm"
+                style={getCardStyle()}
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <Target className="h-5 w-5 mr-2 text-green-600" />
+                    Produits vedettes
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {(campaign as any).featuredProducts.map((product: any, index: number) => (
+                      <div 
+                        key={index} 
+                        className="p-4 hover:shadow-md transition-shadow"
+                        style={getMiniCardStyle()}
+                      >
+                        <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center overflow-hidden">
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <Gift className="h-12 w-12 text-gray-400" />
+                          )}
+                        </div>
+                        <h4 className="font-semibold mb-1">{product.name}</h4>
+                        <p className="text-sm text-gray-600 mb-2">{product.description}</p>
+                        <div className="flex items-center justify-between">
+                          <span className="text-lg font-bold text-purple-600">
+                            {product.discountPrice ? `${product.discountPrice.toFixed(2)}€` : `${product.originalPrice.toFixed(2)}€`}
+                          </span>
+                          {product.discountPrice && product.discountPrice < product.originalPrice && (
+                            <span className="text-sm text-gray-500 line-through">
+                              {product.originalPrice.toFixed(2)}€
+                            </span>
+                          )}
+                        </div>
+                        {product.discountPrice && product.discountPrice < product.originalPrice && (
+                          <div className="mt-2">
+                            <span className="inline-block bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full">
+                              -{Math.round(((product.originalPrice - product.discountPrice) / product.originalPrice) * 100)}% de réduction
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
                   </div>
-                  <div className="p-4 border rounded-lg hover:shadow-md transition-shadow">
-                    <div className="aspect-square bg-gray-100 rounded-lg mb-3 flex items-center justify-center">
-                      <Gift className="h-12 w-12 text-gray-400" />
-                    </div>
-                    <h4 className="font-semibold mb-1">Collection Exclusive</h4>
-                    <p className="text-sm text-gray-600 mb-2">Description du produit</p>
-                    <div className="flex items-center justify-between">
-                      <span className="text-lg font-bold text-purple-600">49,99€</span>
-                      <span className="text-sm text-gray-500 line-through">99,99€</span>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Call to Action */}
             <div className="text-center">
               <Button 
                 onClick={() => window.open(`https://${shopDomain}`, '_blank')}
                 className="text-white px-8 py-3 text-lg"
-                style={{ backgroundColor: customStyles.ctaButtonColor }}
+                style={getCTAButtonStyle()}
               >
                 <ExternalLink className="h-5 w-5 mr-2" />
                 {(campaign as any).ctaText || "Découvrir la boutique"}
@@ -338,7 +534,10 @@ export default function CampaignPage() {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Subscription Form */}
-            <Card className="shadow-lg">
+            <Card 
+              className="backdrop-blur-sm"
+              style={getCardStyle()}
+            >
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Bell className="h-5 w-5 mr-2 text-blue-600" />
@@ -384,7 +583,7 @@ export default function CampaignPage() {
                     <Button 
                       type="submit" 
                       className="w-full text-white"
-                      style={{ backgroundColor: customStyles.ctaButtonColor }}
+                      style={getCTAButtonStyle()}
                       disabled={fetcher.state === "submitting"}
                     >
                       {fetcher.state === "submitting" ? "Inscription..." : "S'inscrire aux offres"}
@@ -401,7 +600,10 @@ export default function CampaignPage() {
             </Card>
 
             {/* Campaign Stats */}
-            <Card className="shadow-lg">
+            <Card 
+              className="backdrop-blur-sm"
+              style={getCardStyle()}
+            >
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <TrendingUp className="h-5 w-5 mr-2 text-green-600" />
@@ -412,22 +614,38 @@ export default function CampaignPage() {
                 <div className="space-y-4">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Participants</span>
-                    <span className="font-semibold">1,247</span>
+                    <span className="font-semibold">{(campaign as any).subscriberCount || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-600">Temps restant</span>
-                    <span className="font-semibold text-orange-600">3 jours</span>
+                    <span className="text-sm text-gray-600">Scans QR</span>
+                    <span className="font-semibold">{(campaign as any).scanCount || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-gray-600">Taux de conversion</span>
-                    <span className="font-semibold text-green-600">12.5%</span>
+                    <span className="font-semibold text-green-600">
+                      {(campaign as any).scanCount > 0 
+                        ? `${(((campaign as any).subscriberCount / (campaign as any).scanCount) * 100).toFixed(1)}%`
+                        : '0%'
+                      }
+                    </span>
                   </div>
+                  {(campaign as any).endDate && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Fin de campagne</span>
+                      <span className="font-semibold text-orange-600">
+                        {new Date((campaign as any).endDate).toLocaleDateString('fr-FR')}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
 
             {/* Share Campaign */}
-            <Card className="shadow-lg">
+            <Card 
+              className="backdrop-blur-sm"
+              style={getCardStyle()}
+            >
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Share2 className="h-5 w-5 mr-2 text-blue-600" />
@@ -457,7 +675,8 @@ export default function CampaignPage() {
                     className="w-full flex items-center justify-center"
                     onClick={() => {
                       navigator.clipboard.writeText(window.location.href);
-                      alert('Lien copié !');
+                      // Notification sera gérée par le système de notifications si disponible
+                      console.log('Lien copié !');
                     }}
                   >
                     <Download className="h-4 w-4 mr-2" />

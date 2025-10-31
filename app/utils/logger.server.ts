@@ -244,7 +244,7 @@ export class Logger {
 
     // Console logging for development
     if (this.isDevelopment) {
-      const timestamp = logEntry.timestamp.toISOString();
+      const timestamp = logEntry.timestamp?.toISOString() || new Date().toISOString();
       const prefix = `[${timestamp}] [${level.toUpperCase()}]`;
       const merchantPrefix = merchantId ? ` [${merchantId}]` : '';
       
@@ -261,7 +261,7 @@ export class Logger {
         data: {
           merchantId: merchantId || null,
           topic: `log_${level}`,
-          payload: logEntry,
+          payload: JSON.parse(JSON.stringify(logEntry)),
         },
       });
     } catch (error) {

@@ -21,9 +21,21 @@ datasource db {
 enum QRType {
   LINK          // redirige vers une URL
   PRODUCT       // redirige vers une page produit Shopify
-  VIDEO         // ouvre une vidéo / tutoriel
   LOYALTY       // lié à un programme de fidélité
   CAMPAIGN      // QR rattaché à une campagne spécifique
+  
+  // Shopify QR Codes
+  HOMEPAGE      // redirige vers la page d'accueil Shopify
+  COLLECTION    // redirige vers une collection Shopify
+  ADD_TO_CART   // ajoute un produit au panier
+  CHECKOUT      // redirige vers le checkout Shopify
+  DISCOUNT      // applique un code promo Shopify
+  
+  // Custom QR Codes
+  TEXT          // contient du texte brut
+  EMAIL         // génère un mailto: avec sujet et message
+  PHONE         // génère un tel: avec numéro
+  SMS           // génère un sms: avec numéro et message
 }
 
 /// Type d'événement analytics
@@ -106,6 +118,18 @@ model QRCode {
   upsellConfig  Json?             // Configuration pour les suggestions de produits
   landingPage   Json?             // Configuration de la page d'atterrissage personnalisée
 
+  // QR Code customization
+  backgroundColor String?         // Couleur de fond du QR code
+  foregroundColor String?         // Couleur principale du QR code
+  backgroundImage String?         // Image d'arrière-plan
+  frameStyle     Json?           // Style du cadre (couleur, épaisseur, etc.)
+  logoStyle      Json?           // Style du logo (taille, position, etc.)
+  logoBackground Json?           // Configuration du fond du logo (couleur, forme, padding)
+  designOptions  Json?           // Options de design (patterns, marqueurs, etc.)
+  
+  // Additional data for specific QR types
+  additionalData Json?           // Données supplémentaires selon le type (email, phone, etc.)
+
   // campaign relation
   campaignId    String? 
   campaign      Campaign? @relation(fields: [campaignId], references: [id])
@@ -132,18 +156,52 @@ model Campaign {
   
   // 🎨 Design et branding
   primaryColor     String?   @default("#007b5c")
+  primaryColorGradient     Boolean?  @default(false)
+  primaryGradientColors     Json?     // Array of color strings
+  primaryGradientDirection  String?   @default("to right")
   secondaryColor   String?   @default("#ffffff")
+  secondaryColorGradient     Boolean?  @default(false)
+  secondaryGradientColors     Json?     // Array of color strings
+  secondaryGradientDirection  String?   @default("to right")
   backgroundColor  String?   @default("#f8f9fa")
+  backgroundColorGradient     Boolean?  @default(false)
+  backgroundGradientColors     Json?     // Array of color strings
+  backgroundGradientDirection  String?   @default("to right")
   logoUrl         String?
   bannerUrl       String?
+  backgroundImage String?   // Image de fond personnalisée
+  // 🎨 Personnalisation des cartes
+  cardBackgroundColor String?   @default("#ffffff")
+  cardBackgroundGradient     Boolean?  @default(false)
+  cardBackgroundGradientColors     Json?     // Array of color strings
+  cardBackgroundGradientDirection  String?   @default("to right")
+  cardBorderColor String?   @default("#e5e7eb")
+  cardBorderWidth Int?      @default(1)
+  cardBorderRadius Int?     @default(8)
+  cardShadow String?        @default("lg")
+  // 🎨 Personnalisation des mini-cartes (produits et offres)
+  miniCardBackgroundColor String?   @default("#ffffff")
+  miniCardBackgroundGradient     Boolean?  @default(false)
+  miniCardBackgroundGradientColors     Json?     // Array of color strings
+  miniCardBackgroundGradientDirection  String?   @default("to right")
+  miniCardBorderColor String?   @default("#e5e7eb")
+  miniCardBorderWidth Int?      @default(1)
+  miniCardBorderRadius Int?     @default(8)
+  miniCardShadow String?        @default("md")
   fontFamily      String?   @default("Inter")
+  fontSize        Int?      @default(16)
+  fontWeight      String?   @default("normal")
   
   // 📝 Contenu dynamique
   mainOffer       String?   // Offre principale
-  featuredProducts Json?    // Produits vedettes (array of product IDs)
+  featuredProducts Json?    // Produits vedettes (array of product objects)
+  specialOffers   Json?     // Offres exceptionnelles (array of offer objects)
   testimonials    Json?     // Témoignages clients
   ctaText         String?   @default("Découvrir les offres")
   ctaButtonColor  String?   @default("#007b5c")
+  ctaButtonColorGradient     Boolean?  @default(false)
+  ctaButtonColorGradientColors     Json?     // Array of color strings
+  ctaButtonColorGradientDirection  String?   @default("to right")
   
   // 🎯 Objectifs et KPIs
   targetScans     Int?      @default(1000)
@@ -181,6 +239,58 @@ model LoyaltyProgram {
   pointsPerScan Int      @default(1)
   rewards       Json?    // structure JSON listant règles / seuils / remises
   active        Boolean  @default(true)
+  
+  // 🎨 Personnalisation de la page loyalty
+  primaryColor     String?   @default("#007b5c")
+  primaryColorGradient     Boolean?  @default(false)
+  primaryGradientColors     Json?     // Array of color strings
+  primaryGradientDirection  String?   @default("to right")
+  secondaryColor   String?   @default("#ffffff")
+  secondaryColorGradient     Boolean?  @default(false)
+  secondaryGradientColors     Json?     // Array of color strings
+  secondaryGradientDirection  String?   @default("to right")
+  backgroundColor  String?   @default("#f8f9fa")
+  backgroundColorGradient     Boolean?  @default(false)
+  backgroundGradientColors     Json?     // Array of color strings
+  backgroundGradientDirection  String?   @default("to right")
+  backgroundImage String?   // Image de fond personnalisée
+  
+  // 🎨 Personnalisation des cartes
+  cardBackgroundColor String?   @default("#ffffff")
+  cardBackgroundGradient     Boolean?  @default(false)
+  cardBackgroundGradientColors     Json?     // Array of color strings
+  cardBackgroundGradientDirection  String?   @default("to right")
+  cardBorderColor String?   @default("#e5e7eb")
+  cardBorderWidth Int?      @default(1)
+  cardBorderRadius Int?     @default(8)
+  cardShadow String?        @default("lg")
+  
+  // 🎨 Personnalisation des mini-cartes (tiers)
+  miniCardBackgroundColor String?   @default("#ffffff")
+  miniCardBackgroundGradient     Boolean?  @default(false)
+  miniCardBackgroundGradientColors     Json?     // Array of color strings
+  miniCardBackgroundGradientDirection  String?   @default("to right")
+  miniCardBorderColor String?   @default("#e5e7eb")
+  miniCardBorderWidth Int?      @default(1)
+  miniCardBorderRadius Int?     @default(8)
+  miniCardShadow String?        @default("md")
+  
+  // 🎨 Typographie
+  fontFamily      String?   @default("Inter")
+  fontSize        Int?       @default(16)
+  fontWeight      String?    @default("normal")
+  
+  // 🎨 Boutons et CTA
+  ctaButtonColor String?   @default("#007b5c")
+  ctaButtonColorGradient     Boolean?  @default(false)
+  ctaButtonColorGradientColors     Json?     // Array of color strings
+  ctaButtonColorGradientDirection  String?   @default("to right")
+  ctaText        String?   @default("Découvrir la boutique")
+  
+  // 🎨 Images et branding
+  logoUrl         String?
+  bannerUrl       String?
+  
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -246,4 +356,57 @@ model RateLimit {
 
   @@map("rate_limits")
   @@index([merchantId, windowStart])
+}
+
+/////////////////////
+// Loyalty Rewards System
+/////////////////////
+
+model CustomerRewards {
+  id           String   @id @default(cuid())
+  merchantId   String
+  customerId   String   // Shopify customer ID or email
+  tier         String   // Bronze, Silver, Gold, Platinum
+  activeRewards Json    // ["discount_10", "free_shipping", "exclusive_access"]
+  discountCode String?  // Code généré automatiquement (ex: "SILVER10")
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@unique([merchantId, customerId])
+  @@index([merchantId, tier])
+  @@map("customer_rewards")
+}
+
+model RewardTemplates {
+  id          String   @id @default(cuid())
+  merchantId  String
+  tier        String   // Bronze, Silver, Gold, Platinum
+  rewardType  String   // "discount", "free_shipping", "exclusive_product", "early_access"
+  value       Json     // Configuration spécifique (percentage, productIds, etc.)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([merchantId, tier, rewardType])
+  @@index([merchantId, tier])
+  @@map("reward_templates")
+}
+
+model ShopifyDiscountCodes {
+  id           String   @id @default(cuid())
+  merchantId   String
+  customerId   String
+  tier         String
+  code         String   // Code Shopify généré
+  shopifyId    String   // ID du code de réduction dans Shopify
+  percentage   Int?     // Pourcentage de réduction
+  expiresAt    DateTime?
+  isUsed       Boolean  @default(false)
+  usedAt       DateTime?
+  createdAt    DateTime @default(now())
+
+  @@unique([merchantId, customerId, tier])
+  @@index([merchantId, code])
+  @@map("shopify_discount_codes")
 }

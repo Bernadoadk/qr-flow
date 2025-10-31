@@ -1,5 +1,5 @@
 import { json, type LoaderFunctionArgs, type ActionFunctionArgs } from "@remix-run/node";
-import { useLoaderData, useActionData, useNavigation, useSubmit } from "@remix-run/react";
+import { useLoaderData, useActionData, useNavigation, useSubmit, useRevalidator } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 import { Page } from "@shopify/polaris";
 import React, { useState, useEffect } from 'react';
@@ -16,6 +16,7 @@ import Loader from '../components/ui/Loader';
 import { formatNumber, formatDate, formatCurrency, formatPercentage } from '../utils/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
 import CampaignPersonalization from '../components/campaigns/CampaignPersonalization';
+import { useQuickNotifications } from '../components/ui/NotificationSystem';
 import {
   Plus,
   Search,
@@ -42,6 +43,49 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
   
   const merchant = await getOrCreateMerchant(session.shop, session.accessToken);
+  
+  // Get products from Shopify
+  const products = await admin.graphql(
+    `#graphql
+      query getProducts($first: Int!) {
+        products(first: $first) {
+          edges {
+            node {
+              id
+              title
+              handle
+              description
+              featuredMedia {
+                ... on MediaImage {
+                  image {
+                    url
+                  }
+                }
+              }
+              variants(first: 1) {
+                edges {
+                  node {
+                    price
+                  }
+                }
+              }
+            }
+          }
+        }
+      }`,
+    {
+      variables: { first: 50 },
+    }
+  );
+
+  const productsData = await products.json();
+  const shopifyProducts = productsData.data?.products?.edges?.map((edge: any) => {
+    const product = edge.node;
+    return {
+      ...product,
+      featuredImage: product.featuredMedia?.image?.url || null
+    };
+  }) || [];
   
   // Get campaigns with QR codes and analytics
   const campaigns = await prisma.campaign.findMany({
@@ -81,6 +125,7 @@ export const loader = async ({ request }: LoaderFunctionArgs) => {
     shop: session.shop,
     merchant,
     campaigns: campaignStats,
+    shopifyProducts,
   });
 };
 
@@ -167,18 +212,52 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
       case "update_personalization": {
         const id = formData.get("id") as string;
+        console.log("🔄 Mise à jour personnalisation pour campagne:", id);
         
         // Récupérer toutes les données de personnalisation
         const personalizationData = {
           primaryColor: formData.get("primaryColor") as string,
+          primaryColorGradient: formData.get("primaryColorGradient") === "true",
+          primaryGradientColors: formData.get("primaryGradientColors") ? JSON.parse(formData.get("primaryGradientColors") as string) : null,
+          primaryGradientDirection: formData.get("primaryGradientDirection") as string,
           secondaryColor: formData.get("secondaryColor") as string,
+          secondaryColorGradient: formData.get("secondaryColorGradient") === "true",
+          secondaryGradientColors: formData.get("secondaryGradientColors") ? JSON.parse(formData.get("secondaryGradientColors") as string) : null,
+          secondaryGradientDirection: formData.get("secondaryGradientDirection") as string,
           backgroundColor: formData.get("backgroundColor") as string,
-          logoUrl: formData.get("logoUrl") as string,
-          bannerUrl: formData.get("bannerUrl") as string,
+          backgroundColorGradient: formData.get("backgroundColorGradient") === "true",
+          backgroundGradientColors: formData.get("backgroundGradientColors") ? JSON.parse(formData.get("backgroundGradientColors") as string) : null,
+          backgroundGradientDirection: formData.get("backgroundGradientDirection") as string,
+            logoUrl: formData.get("logoUrl") as string,
+            bannerUrl: formData.get("bannerUrl") as string,
+            backgroundImage: formData.get("backgroundImage") as string,
+            // 🎨 Personnalisation des cartes
+            cardBackgroundColor: formData.get("cardBackgroundColor") as string,
+            cardBackgroundGradient: formData.get("cardBackgroundGradient") === "true",
+            cardBackgroundGradientColors: formData.get("cardBackgroundGradientColors") ? JSON.parse(formData.get("cardBackgroundGradientColors") as string) : null,
+            cardBackgroundGradientDirection: formData.get("cardBackgroundGradientDirection") as string,
+            cardBorderColor: formData.get("cardBorderColor") as string,
+            cardBorderWidth: formData.get("cardBorderWidth") ? parseInt(formData.get("cardBorderWidth") as string) : null,
+            cardBorderRadius: formData.get("cardBorderRadius") ? parseInt(formData.get("cardBorderRadius") as string) : null,
+            cardShadow: formData.get("cardShadow") as string,
+            // 🎨 Personnalisation des mini-cartes
+            miniCardBackgroundColor: formData.get("miniCardBackgroundColor") as string,
+            miniCardBackgroundGradient: formData.get("miniCardBackgroundGradient") === "true",
+            miniCardBackgroundGradientColors: formData.get("miniCardBackgroundGradientColors") ? JSON.parse(formData.get("miniCardBackgroundGradientColors") as string) : null,
+            miniCardBackgroundGradientDirection: formData.get("miniCardBackgroundGradientDirection") as string,
+            miniCardBorderColor: formData.get("miniCardBorderColor") as string,
+            miniCardBorderWidth: formData.get("miniCardBorderWidth") ? parseInt(formData.get("miniCardBorderWidth") as string) : null,
+            miniCardBorderRadius: formData.get("miniCardBorderRadius") ? parseInt(formData.get("miniCardBorderRadius") as string) : null,
+            miniCardShadow: formData.get("miniCardShadow") as string,
           fontFamily: formData.get("fontFamily") as string,
+          fontSize: formData.get("fontSize") ? parseInt(formData.get("fontSize") as string) : null,
+          fontWeight: formData.get("fontWeight") as string,
           mainOffer: formData.get("mainOffer") as string,
-          ctaText: formData.get("ctaText") as string,
-          ctaButtonColor: formData.get("ctaButtonColor") as string,
+            ctaText: formData.get("ctaText") as string,
+            ctaButtonColor: formData.get("ctaButtonColor") as string,
+            ctaButtonColorGradient: formData.get("ctaButtonColorGradient") === "true",
+            ctaButtonColorGradientColors: formData.get("ctaButtonColorGradientColors") ? JSON.parse(formData.get("ctaButtonColorGradientColors") as string) : null,
+            ctaButtonColorGradientDirection: formData.get("ctaButtonColorGradientDirection") as string,
           targetScans: formData.get("targetScans") ? parseInt(formData.get("targetScans") as string) : null,
           targetSignups: formData.get("targetSignups") ? parseInt(formData.get("targetSignups") as string) : null,
           budget: formData.get("budget") ? parseFloat(formData.get("budget") as string) : null,
@@ -187,13 +266,26 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           mailchimpListId: formData.get("mailchimpListId") as string,
           klaviyoListId: formData.get("klaviyoListId") as string,
           facebookPixelId: formData.get("facebookPixelId") as string,
+          // Ajouter les champs manquants pour les produits et offres
+          featuredProducts: formData.get("featuredProducts") ? JSON.parse(formData.get("featuredProducts") as string) : [],
+          specialOffers: formData.get("specialOffers") ? JSON.parse(formData.get("specialOffers") as string) : [],
         };
 
+        console.log("💾 Données à sauvegarder:", personalizationData);
+        
         const campaign = await prisma.campaign.update({
           where: { id },
           data: personalizationData,
         });
 
+        console.log("✅ Campagne mise à jour:", campaign.id);
+        console.log("✅ Données sauvegardées:", {
+          primaryColor: campaign.primaryColor,
+          primaryColorGradient: campaign.primaryColorGradient,
+          primaryGradientColors: campaign.primaryGradientColors,
+          featuredProducts: (campaign as any).featuredProducts,
+          specialOffers: (campaign as any).specialOffers
+        });
         return json({ success: true, campaign });
       }
 
@@ -207,10 +299,12 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 };
 
 export default function CampaignsRoute() {
-  const { shop, merchant, campaigns } = useLoaderData<typeof loader>();
+  const { shop, merchant, campaigns, shopifyProducts } = useLoaderData<typeof loader>();
   const actionData = useActionData<typeof action>();
   const navigation = useNavigation();
   const submit = useSubmit();
+  const revalidator = useRevalidator();
+  const { success: notifySuccess, error: notifyError, info: notifyInfo } = useQuickNotifications();
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -220,6 +314,25 @@ export default function CampaignsRoute() {
   const [editingCampaign, setEditingCampaign] = useState<any>(null);
   const [personalizingCampaign, setPersonalizingCampaign] = useState<any>(null);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+  const [previewSuccess, setPreviewSuccess] = useState(false);
+
+  // Recharger les données de la campagne après sauvegarde
+  useEffect(() => {
+    if (actionData && 'success' in actionData && actionData.success && 'campaign' in actionData && actionData.campaign && personalizingCampaign) {
+      console.log("🔄 Mise à jour des données de campagne après sauvegarde");
+      setPersonalizingCampaign(actionData.campaign);
+      setSaveSuccess(true);
+      setPreviewSuccess(false);
+      // Recharger les données sans recharger la page
+      revalidator.revalidate();
+      
+      // Masquer le message de succès après 3 secondes
+      setTimeout(() => {
+        setSaveSuccess(false);
+      }, 3000);
+    }
+  }, [actionData, personalizingCampaign, revalidator]);
   const [newCampaignData, setNewCampaignData] = useState({
     name: '',
     description: '',
@@ -246,6 +359,8 @@ export default function CampaignsRoute() {
   });
 
   const handleCreateCampaign = async () => {
+    notifyInfo('Création en cours...', 'Création de la campagne, veuillez patienter.');
+    
     const formData = new FormData();
     formData.append("action", "create");
     formData.append("name", newCampaignData.name);
@@ -284,17 +399,19 @@ export default function CampaignsRoute() {
   };
 
   const handleDeleteCampaign = async (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer cette campagne ?')) {
-      const formData = new FormData();
-      formData.append("action", "delete");
-      formData.append("id", id);
+    notifyInfo('Suppression en cours...', 'Suppression de la campagne, veuillez patienter.');
+    
+    const formData = new FormData();
+    formData.append("action", "delete");
+    formData.append("id", id);
 
-      submit(formData, { method: "post" });
-    }
+    submit(formData, { method: "post" });
   };
 
   const handleToggleCampaign = async (id: string, currentStatus: string) => {
     const newStatus = currentStatus === 'active' ? 'paused' : 'active';
+    notifyInfo('Modification en cours...', `${newStatus === 'active' ? 'Activation' : 'Mise en pause'} de la campagne...`);
+    
     const formData = new FormData();
     formData.append("action", "toggle");
     formData.append("id", id);
@@ -306,9 +423,20 @@ export default function CampaignsRoute() {
   const handlePersonalizeCampaign = (campaign: any) => {
     setPersonalizingCampaign(campaign);
     setIsPersonalizationModalOpen(true);
+    setSaveSuccess(false);
+    setPreviewSuccess(false);
+  };
+
+  const handleClosePersonalizationModal = () => {
+    setIsPersonalizationModalOpen(false);
+    setPersonalizingCampaign(null);
+    setSaveSuccess(false);
+    setPreviewSuccess(false);
   };
 
   const handleSavePersonalization = async (personalizationData: any) => {
+    console.log("🔧 Sauvegarde personnalisation:", personalizationData);
+    
     const formData = new FormData();
     formData.append("action", "update_personalization");
     formData.append("id", personalizingCampaign.id);
@@ -316,19 +444,59 @@ export default function CampaignsRoute() {
     // Ajouter toutes les données de personnalisation
     Object.entries(personalizationData).forEach(([key, value]) => {
       if (value !== null && value !== undefined) {
-        formData.append(key, value.toString());
+        if (Array.isArray(value)) {
+          // Pour les tableaux (comme gradientColors), les sérialiser en JSON
+          const jsonValue = JSON.stringify(value);
+          formData.append(key, jsonValue);
+          console.log(`📦 ${key}:`, jsonValue);
+        } else {
+          formData.append(key, value.toString());
+          console.log(`📝 ${key}:`, value);
+        }
       }
     });
 
     submit(formData, { method: "post" });
-    setIsPersonalizationModalOpen(false);
-    setPersonalizingCampaign(null);
+    // Ne pas fermer la modal - laisser l'utilisateur continuer à personnaliser
+  };
+
+  const handleSaveForPreview = async (personalizationData: any) => {
+    console.log("👁️ Sauvegarde pour aperçu:", personalizationData);
+    
+    const formData = new FormData();
+    formData.append("action", "update_personalization");
+    formData.append("id", personalizingCampaign.id);
+    
+    // Ajouter toutes les données de personnalisation
+    Object.entries(personalizationData).forEach(([key, value]) => {
+      if (value !== null && value !== undefined) {
+        if (Array.isArray(value)) {
+          // Pour les tableaux (comme gradientColors), les sérialiser en JSON
+          const jsonValue = JSON.stringify(value);
+          formData.append(key, jsonValue);
+          console.log(`📦 ${key}:`, jsonValue);
+        } else {
+          formData.append(key, value.toString());
+          console.log(`📝 ${key}:`, value);
+        }
+      }
+    });
+
+    submit(formData, { method: "post" });
+    // Ne pas fermer la modal pour l'aperçu - l'utilisateur peut continuer à personnaliser
   };
 
   const handlePreviewCampaign = () => {
     if (personalizingCampaign) {
       // Ouvrir la page de campagne dans un nouvel onglet
       window.open(`/campaign/${personalizingCampaign.id}`, '_blank');
+      setPreviewSuccess(true);
+      setSaveSuccess(false);
+      
+      // Masquer le message de succès après 3 secondes
+      setTimeout(() => {
+        setPreviewSuccess(false);
+      }, 3000);
     }
   };
 
@@ -785,16 +953,21 @@ export default function CampaignsRoute() {
         {/* Personalization Modal */}
         <Modal
           isOpen={isPersonalizationModalOpen}
-          onClose={() => setIsPersonalizationModalOpen(false)}
+          onClose={handleClosePersonalizationModal}
           title="Personnaliser la campagne"
-          size="xl"
+          size="2xl"
         >
           {personalizingCampaign && (
             <CampaignPersonalization
               campaign={personalizingCampaign}
               onSave={handleSavePersonalization}
+              onSaveForPreview={handleSaveForPreview}
               onPreview={handlePreviewCampaign}
+              onClose={handleClosePersonalizationModal}
               isLoading={navigation.state === "submitting"}
+              shopifyProducts={shopifyProducts}
+              saveSuccess={saveSuccess}
+              previewSuccess={previewSuccess}
             />
           )}
         </Modal>

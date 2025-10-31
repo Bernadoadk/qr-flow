@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, X } from 'lucide-react';
 import { Button } from './Button';
+import { AlertTriangle, X } from 'lucide-react';
 
 interface ConfirmDialogProps {
   isOpen: boolean;
@@ -11,11 +11,11 @@ interface ConfirmDialogProps {
   message: string;
   confirmText?: string;
   cancelText?: string;
-  variant?: 'danger' | 'warning' | 'info';
-  loading?: boolean;
+  type?: 'danger' | 'warning' | 'info';
+  isLoading?: boolean;
 }
 
-export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
+export default function ConfirmDialog({
   isOpen,
   onClose,
   onConfirm,
@@ -23,114 +23,100 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   message,
   confirmText = 'Confirmer',
   cancelText = 'Annuler',
-  variant = 'danger',
-  loading = false,
-}) => {
-  const getVariantStyles = () => {
-    switch (variant) {
+  type = 'danger',
+  isLoading = false
+}: ConfirmDialogProps) {
+  if (!isOpen) return null;
+
+  const getColors = () => {
+    switch (type) {
       case 'danger':
         return {
-          icon: 'text-red-600',
-          bg: 'bg-red-50',
-          border: 'border-red-200',
-          button: 'bg-red-600 hover:bg-red-700',
+          icon: 'text-red-500',
+          button: 'bg-red-600 hover:bg-red-700 text-white',
+          border: 'border-red-200'
         };
       case 'warning':
         return {
-          icon: 'text-yellow-600',
-          bg: 'bg-yellow-50',
-          border: 'border-yellow-200',
-          button: 'bg-yellow-600 hover:bg-yellow-700',
+          icon: 'text-yellow-500',
+          button: 'bg-yellow-600 hover:bg-yellow-700 text-white',
+          border: 'border-yellow-200'
         };
       case 'info':
         return {
-          icon: 'text-blue-600',
-          bg: 'bg-blue-50',
-          border: 'border-blue-200',
-          button: 'bg-blue-600 hover:bg-blue-700',
+          icon: 'text-blue-500',
+          button: 'bg-blue-600 hover:bg-blue-700 text-white',
+          border: 'border-blue-200'
+        };
+      default:
+        return {
+          icon: 'text-red-500',
+          button: 'bg-red-600 hover:bg-red-700 text-white',
+          border: 'border-red-200'
         };
     }
   };
 
-  const styles = getVariantStyles();
+  const colors = getColors();
 
   return (
     <AnimatePresence>
-      {isOpen && (
-        <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="flex min-h-screen items-center justify-center p-4">
-            {/* Backdrop */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity"
-              onClick={onClose}
-            />
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex min-h-screen items-center justify-center p-4 text-center sm:p-0">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black bg-opacity-50 transition-opacity"
+            onClick={onClose}
+          />
 
-            {/* Dialog */}
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              transition={{ duration: 0.2 }}
-              className={`relative bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full ${styles.border} border-2`}
-            >
-              {/* Header */}
-              <div className={`p-6 ${styles.bg} rounded-t-lg`}>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <div className={`p-2 rounded-full ${styles.bg}`}>
-                      <AlertTriangle className={`h-6 w-6 ${styles.icon}`} />
-                    </div>
-                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                      {title}
-                    </h3>
+          {/* Dialog */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 20 }}
+            transition={{ duration: 0.2 }}
+            className="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg"
+          >
+            <div className="bg-white px-4 pb-4 pt-5 sm:p-6 sm:pb-4">
+              <div className="sm:flex sm:items-start">
+                <div className={`mx-auto flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10`}>
+                  <AlertTriangle className={`h-6 w-6 ${colors.icon}`} />
+                </div>
+                <div className="mt-3 text-center sm:ml-4 sm:mt-0 sm:text-left">
+                  <h3 className="text-lg font-medium leading-6 text-gray-900">
+                    {title}
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500 whitespace-pre-line">
+                      {message}
+                    </p>
                   </div>
-                  <button
-                    onClick={onClose}
-                    className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
-                  >
-                    <X className="h-5 w-5" />
-                  </button>
                 </div>
               </div>
-
-              {/* Content */}
-              <div className="p-6">
-                <p className="text-gray-600 dark:text-gray-300 mb-6">
-                  {message}
-                </p>
-
-                {/* Actions */}
-                <div className="flex space-x-3 justify-end">
-                  <Button
-                    variant="outline"
-                    onClick={onClose}
-                    disabled={loading}
-                  >
-                    {cancelText}
-                  </Button>
-                  <Button
-                    onClick={onConfirm}
-                    disabled={loading}
-                    className={`${styles.button} text-white`}
-                  >
-                    {loading ? 'Chargement...' : confirmText}
-                  </Button>
-                </div>
-              </div>
-            </motion.div>
-          </div>
+            </div>
+            <div className="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
+              <Button
+                onClick={onConfirm}
+                disabled={isLoading}
+                className={`${colors.button} w-full sm:ml-3 sm:w-auto`}
+              >
+                {isLoading ? 'Suppression...' : confirmText}
+              </Button>
+              <Button
+                onClick={onClose}
+                variant="outline"
+                className="mt-3 w-full sm:mt-0 sm:w-auto"
+                disabled={isLoading}
+              >
+                {cancelText}
+              </Button>
+            </div>
+          </motion.div>
         </div>
-      )}
+      </div>
     </AnimatePresence>
   );
-};
-
-export default ConfirmDialog;
-
-
-
-
-
+}

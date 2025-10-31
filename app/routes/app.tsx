@@ -18,6 +18,8 @@ import { useState, useEffect } from "react";
 import { ToastContainer, useToast } from "../components/ui/Toast";
 import { PageLoader } from "../components/ui/PageLoader";
 import { ErrorBoundary } from "../components/ui/ErrorBoundary";
+import { Tooltip } from "../components/ui/Tooltip";
+import { FEATURES } from "../config/features";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   await authenticate.admin(request);
@@ -105,10 +107,10 @@ export default function App() {
         )}
 
         {/* Sidebar */}
-        <div className={`fixed inset-y-0 left-0 z-50 w-64 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 lg:flex-shrink-0 ${
+        <div className={`fixed inset-y-0 left-0 z-50 w-80 transform transition-transform duration-300 ease-in-out lg:translate-x-0 ${
           sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}>
-          <div className={`flex h-full flex-col ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`}>
+        }`} style={{ height: '100vh', overflow: 'hidden', boxShadow: '4px 0 12px rgba(0, 0, 0, 0.1)' }}>
+          <div className={`flex h-full flex-col ${isDarkMode ? 'bg-gray-800' : 'bg-white'} shadow-lg`} style={{ height: '100vh' }}>
             {/* Logo */}
             <div className={`flex h-16 items-center justify-between px-6 border-b ${isDarkMode ? 'border-gray-700' : 'border-gray-200'}`}>
               <div className="flex items-center space-x-3">
@@ -128,32 +130,84 @@ export default function App() {
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 px-4 py-6 space-y-2">
-              {navigation.map((item, index) => (
-                <motion.div
-                  key={item.name}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ delay: index * 0.1 }}
-                >
-                  <Link
-                    to={item.href}
-                    className={`group flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all duration-200 ${
-                      isActive(item.href)
-                        ? `${isDarkMode ? 'bg-gray-700 text-white' : 'bg-blue-50 text-blue-700'} shadow-sm`
-                        : `${isDarkMode ? 'text-gray-300 hover:bg-gray-700 hover:text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`
-                    }`}
-                    onClick={() => setSidebarOpen(false)}
+            <nav className="flex-1 px-4 py-6" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {navigation.map((item, index) => {
+                const isFidelityItem = item.name === 'Fidélité';
+                const isFidelityDisabled = isFidelityItem && !FEATURES.FIDELITY_ENABLED;
+                
+                const navigationItem = (
+                  <motion.div
+                    key={item.name}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ delay: index * 0.1 }}
                   >
-                    <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${
-                      isActive(item.href)
-                        ? isDarkMode ? 'text-blue-400' : 'text-blue-500'
-                        : isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-500'
-                    }`} />
-                    {item.name}
-                  </Link>
-                </motion.div>
-              ))}
+                    {isFidelityDisabled ? (
+                      <div
+                        className={`group flex items-center text-sm font-medium rounded-lg transition-all duration-200 ${
+                          isDarkMode 
+                            ? 'text-gray-500 cursor-not-allowed opacity-60' 
+                            : 'text-gray-400 cursor-not-allowed opacity-60'
+                        }`}
+                        style={{
+                          padding: '12px 16px',
+                          marginBottom: '8px'
+                        }}
+                      >
+                        <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                          isDarkMode ? 'text-gray-600' : 'text-gray-400'
+                        }`} />
+                        {item.name}
+                      </div>
+                    ) : (
+                      <Link
+                        to={item.href}
+                        className={`group flex items-center text-sm font-medium rounded-lg transition-all duration-200 ${
+                          isActive(item.href)
+                            ? `${isDarkMode ? 'bg-gray-700 text-white' : 'bg-blue-50 text-blue-700'} shadow-sm`
+                            : `${isDarkMode ? 'text-gray-300 hover:bg-gray-50 hover:text-white' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`
+                        }`}
+                        onClick={() => setSidebarOpen(false)}
+                        style={{
+                          padding: '12px 16px',
+                          marginBottom: '8px'
+                        }}
+                      >
+                        <item.icon className={`mr-3 h-5 w-5 flex-shrink-0 ${
+                          isActive(item.href)
+                            ? isDarkMode ? 'text-blue-400' : 'text-blue-500'
+                            : isDarkMode ? 'text-gray-400 group-hover:text-gray-300' : 'text-gray-400 group-hover:text-gray-500'
+                        }`} />
+                        {item.name}
+                      </Link>
+                    )}
+                  </motion.div>
+                );
+
+                if (isFidelityDisabled) {
+                  return (
+                    <Tooltip
+                      key={item.name}
+                      content={
+                        <div className="text-center">
+                          <div className="font-semibold text-gray-900 mb-1">
+                            Programme de fidélité
+                          </div>
+                          <div className="text-gray-600 text-xs leading-relaxed">
+                            Bientôt disponible 🎉<br />
+                            Cette fonctionnalité permettra de créer des programmes de fidélité personnalisés pour récompenser vos clients via des QR codes.
+                          </div>
+                        </div>
+                      }
+                      side="right"
+                    >
+                      {navigationItem}
+                    </Tooltip>
+                  );
+                }
+
+                return navigationItem;
+              })}
             </nav>
 
             {/* Footer */}
@@ -166,7 +220,7 @@ export default function App() {
         </div>
 
         {/* Main content */}
-        <div className="lg:pl-64 flex-1">
+        <div className="lg:pl-80 flex-1" style={{ marginLeft: '320px', width: 'calc(100% - 320px)' }}>
           {/* Mobile header */}
           <div className="lg:hidden flex h-16 items-center justify-between px-4 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <button

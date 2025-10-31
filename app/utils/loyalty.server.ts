@@ -211,21 +211,30 @@ export class LoyaltyService {
       const points = customerPoints?.points || 0;
       const tiers = (loyaltyProgram.rewards as any)?.tiers || [];
       
-      let currentTier = tiers[0];
+      // Default tiers if none configured
+      const defaultTiers = [
+        { name: "Bronze", minPoints: 0 },
+        { name: "Silver", minPoints: 100 },
+        { name: "Gold", minPoints: 300 },
+        { name: "Platinum", minPoints: 600 }
+      ];
+      
+      const tierList = tiers.length > 0 ? tiers : defaultTiers;
+      let currentTier = tierList[0];
       let nextTier = null;
 
-      for (let i = 0; i < tiers.length; i++) {
-        if (points >= tiers[i].minPoints) {
-          currentTier = tiers[i];
-          if (i < tiers.length - 1) {
-            nextTier = tiers[i + 1];
+      for (let i = 0; i < tierList.length; i++) {
+        if (points >= tierList[i].minPoints) {
+          currentTier = tierList[i];
+          if (i < tierList.length - 1) {
+            nextTier = tierList[i + 1];
           }
         }
       }
 
       return {
         points,
-        tier: currentTier.name,
+        tier: currentTier?.name || "Bronze",
         nextTier: nextTier?.name,
         pointsToNextTier: nextTier ? nextTier.minPoints - points : 0,
       };

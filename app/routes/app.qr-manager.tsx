@@ -17,6 +17,9 @@ import QRCodeEditor from '../components/qr/QRCodeEditor';
 import BatchExportModal from '../components/qr/BatchExportModal';
 import { formatNumber, formatDate, formatCurrency } from '../utils/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuickNotifications } from '../components/ui/NotificationSystem';
+import { Tooltip } from '../components/ui/Tooltip';
+import { FEATURES } from '../config/features';
 import {
   Plus,
   Search,
@@ -45,6 +48,7 @@ import {
   Download,
 } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
+import { StyledQRCode } from '../components/qr/StyledQRCode';
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
   const { admin, session } = await authenticate.admin(request);
@@ -196,6 +200,7 @@ export const action = async ({ request }: ActionFunctionArgs) => {
 
 export default function QRManagerRoute() {
   const { shop, merchant, qrCodes, campaigns, stats } = useLoaderData<typeof loader>();
+  const { success: notifySuccess, error: notifyError, info: notifyInfo } = useQuickNotifications();
   
   // Generate scan URL for QR code preview
   const generateScanURL = (qr: any) => {
@@ -324,16 +329,18 @@ export default function QRManagerRoute() {
   };
 
   const handleDeleteQR = async (id: string) => {
-    if (confirm('Êtes-vous sûr de vouloir supprimer ce QR code ?')) {
-      const formData = new FormData();
-      formData.append("action", "delete");
-      formData.append("id", id);
+    notifyInfo('Suppression en cours...', 'Suppression du QR code, veuillez patienter.');
+    
+    const formData = new FormData();
+    formData.append("action", "delete");
+    formData.append("id", id);
 
-      submit(formData, { method: "post" });
-    }
+    submit(formData, { method: "post" });
   };
 
   const handleToggleQR = async (id: string, active: boolean) => {
+    notifyInfo('Modification en cours...', `${active ? 'Activation' : 'Désactivation'} du QR code...`);
+    
     const formData = new FormData();
     formData.append("action", "toggle");
     formData.append("id", id);
@@ -672,32 +679,35 @@ export default function QRManagerRoute() {
                             variant="ghost"
                             size="sm"
                             className="h-6 w-6 p-0"
-                            onClick={() => {
-                              // Fonction pour télécharger le QR code
-                              const svgElement = document.querySelector(`[data-qr-id="${qr.id}"] svg`);
-                              if (svgElement) {
-                                const svgData = new XMLSerializer().serializeToString(svgElement);
-                                const canvas = document.createElement('canvas');
-                                const ctx = canvas.getContext('2d');
-                                
-                                if (!ctx) {
-                                  console.error('Impossible de créer le contexte canvas');
+                            onClick={async () => {
+                              try {
+                                // Find the preview container for this QR code
+                                const previewContainer = document.querySelector(`[data-qr-id="${qr.id}"]`) as HTMLElement;
+                                if (!previewContainer) {
+                                  console.error('Impossible de trouver le conteneur de preview');
                                   return;
                                 }
-                                
-                                const img = new Image();
-                                canvas.width = 256;
-                                canvas.height = 256;
-                                
-                                img.onload = () => {
-                                  ctx.drawImage(img, 0, 0, 256, 256);
-                                  const link = document.createElement('a');
-                                  link.download = `qr-code-${qr.title.replace(/\s+/g, '-')}.png`;
-                                  link.href = canvas.toDataURL();
-                                  link.click();
-                                };
-                                
-                                img.src = 'data:image/svg+xml;base64,' + btoa(svgData);
+
+                                // Use html2canvas to capture the entire preview container with all customizations
+                                const html2canvas = (await import('html2canvas')).default;
+                                const canvas = await html2canvas(previewContainer, {
+                                  backgroundColor: (qr.backgroundColor as string) || '#ffffff',
+                                  scale: 4, // Very high quality for perfect resolution
+                                  logging: false,
+                                  useCORS: true,
+                                  allowTaint: true,
+                                  windowWidth: previewContainer.scrollWidth,
+                                  windowHeight: previewContainer.scrollHeight,
+                                });
+
+                                // Create download link with maximum quality
+                                const link = document.createElement('a');
+                                link.download = `qr-code-${qr.title.replace(/\s+/g, '-')}.png`;
+                                link.href = canvas.toDataURL('image/png', 1.0); // Maximum quality
+                                link.click();
+                              } catch (err) {
+                                console.error('Erreur lors du téléchargement:', err);
+                                notifyError('Erreur de téléchargement', 'Impossible de télécharger le QR code.');
                               }
                             }}
                             title="Télécharger le QR code"
@@ -707,13 +717,34 @@ export default function QRManagerRoute() {
                         </div>
                       </div>
                       <div className="flex justify-center">
-                        <div className="p-4 bg-white rounded-lg shadow-sm" data-qr-id={qr.id}>
-                          <QRCodeSVG
+                        <div 
+                          className="p-4 bg-white rounded-lg shadow-sm flex items-center justify-center" 
+                          data-qr-id={qr.id}
+                          style={{ 
+                            backgroundColor: (qr.backgroundColor as string) || '#ffffff',
+                            minHeight: '280px',
+                            minWidth: '280px'
+                          }}
+                        >
+                          <StyledQRCode
                             value={generateScanURL(qr)}
-                            size={120}
-                            fgColor="#000000"
-                            bgColor="#ffffff"
-                            level="M"
+                            size={256}
+                            foregroundColor={(qr.foregroundColor as string) || (qr.color as string) || '#000000'}
+                            backgroundColor={(qr.backgroundColor as string) || '#ffffff'}
+                            backgroundImage={(qr.backgroundImage as string) || undefined}
+                            logo={(qr.logoUrl as string) || undefined}
+                            logoSize={((qr.logoStyle as any)?.enabled && (qr.logoStyle as any)?.size) ? (qr.logoStyle as any).size : 0}
+                            logoBackground={((qr as any).logoBackground?.enabled) ? {
+                              color: (qr as any).logoBackground.color || '#FFFFFF',
+                              shape: (qr as any).logoBackground.shape || 'circle',
+                              padding: (qr as any).logoBackground.padding || 10
+                            } : undefined}
+                            frameStyle={(qr.frameStyle as any) || { enabled: false }}
+                            designOptions={(qr.designOptions as any) || {
+                              pattern: 'default',
+                              marker: 'default',
+                              centerDotStyle: 'default',
+                            }}
                           />
                         </div>
                       </div>
@@ -759,11 +790,13 @@ export default function QRManagerRoute() {
               <Select
                 value={newQRData.type}
                 onChange={(e) => setNewQRData({ ...newQRData, type: e.target.value })}
+                disabled={!FEATURES.FIDELITY_ENABLED && newQRData.type === 'LOYALTY'}
               >
                 <option value="LINK">Lien</option>
                 <option value="PRODUCT">Produit</option>
-                <option value="VIDEO">Vidéo</option>
-                <option value="LOYALTY">Fidélité</option>
+                <option value="LOYALTY" disabled={!FEATURES.FIDELITY_ENABLED}>
+                  Fidélité {!FEATURES.FIDELITY_ENABLED ? '(Bientôt disponible)' : ''}
+                </option>
                 <option value="CAMPAIGN">Campagne</option>
               </Select>
             </div>

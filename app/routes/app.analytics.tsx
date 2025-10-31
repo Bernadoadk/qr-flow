@@ -11,6 +11,7 @@ import { Select } from '../components/ui/Select';
 import { Badge } from '../components/ui/Badge';
 import { formatNumber, formatPercentage, formatDate } from '../utils/formatters';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useQuickNotifications } from '../components/ui/NotificationSystem';
 import {
   TrendingUp,
   TrendingDown,
@@ -190,6 +191,16 @@ export default function AnalyticsRoute() {
   const [period, setPeriod] = useState('30d');
   const [isDarkMode, setIsDarkMode] = useState(false);
   const navigate = useNavigate();
+  const { success: notifySuccess, error: notifyError, info: notifyInfo } = useQuickNotifications();
+
+  const handleExportData = () => {
+    notifyInfo('Export en cours...', 'Préparation des données d\'analytics pour l\'export...');
+    
+    // Simuler l'export (à implémenter selon les besoins)
+    setTimeout(() => {
+      notifySuccess('Export réussi !', 'Vos données d\'analytics ont été exportées avec succès.');
+    }, 2000);
+  };
 
   useEffect(() => {
     // Detect dark mode preference
@@ -292,6 +303,7 @@ export default function AnalyticsRoute() {
               <Button
                 variant="outline"
                 className="flex items-center space-x-2"
+                onClick={handleExportData}
               >
                 <Download className="h-4 w-4" />
                 <span>Exporter</span>

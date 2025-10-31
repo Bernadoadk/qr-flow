@@ -1,58 +1,52 @@
-import { json, type ActionFunctionArgs } from "@remix-run/node";
-import { prisma } from "~/db.server";
-import { verifyWebhookSignature } from "~/utils/security.server";
+import type { ActionFunctionArgs } from "@remix-run/node";
+import { authenticate } from "../shopify.server";
+import { prisma } from "../db.server";
 
-export async function action({ request }: ActionFunctionArgs) {
-  if (request.method !== "POST") {
-    return json({ error: "Method not allowed" }, { status: 405 });
-  }
-
+export const action = async ({ request }: ActionFunctionArgs) => {
   try {
-    // Verify webhook signature
-    const signature = request.headers.get("X-Shopify-Hmac-Sha256");
-    const body = await request.text();
-    
-    if (!signature || !process.env.SHOPIFY_WEBHOOK_SECRET) {
-      return json({ error: "Missing signature or secret" }, { status: 401 });
-    }
-
-    if (!verifyWebhookSignature(body, signature, process.env.SHOPIFY_WEBHOOK_SECRET)) {
-      return json({ error: "Invalid signature" }, { status: 401 });
-    }
-
-    const appData = JSON.parse(body);
-    const shopDomain = request.headers.get("X-Shopify-Shop-Domain");
-
-    if (!shopDomain) {
-      return json({ error: "Missing shop domain" }, { status: 400 });
-    }
+    const { payload, session, topic, shop } = await authenticate.webhook(request);
+    console.log(`Received ${topic} webhook for ${shop}`);
 
     // Find merchant
     const merchant = await prisma.merchant.findUnique({
-      where: { shopifyDomain: shopDomain },
+      where: { shopifyDomain: shop },
     });
 
-    if (!merchant) {
-      return json({ error: "Merchant not found" }, { status: 404 });
+    if (merchant) {
+      // Log webhook
+      try {
+        await prisma.webhookLog.create({
+          data: {
+            merchantId: merchant.id,
+            topic: "app/uninstalled",
+            payload: payload as any,
+          },
+        });
+      } catch (logError) {
+        // Continue even if logging fails
+        console.error("Error logging webhook:", logError);
+      }
+
+      // Clean up merchant data (optional - you might want to keep data for reinstall)
+      await cleanupMerchantData(merchant.id);
     }
 
-    // Log webhook
-    await prisma.webhookLog.create({
-      data: {
-        merchantId: merchant.id,
-        topic: "app/uninstalled",
-        payload: appData,
-      },
-    });
+    // Delete session if it exists
+    if (session) {
+      try {
+        await prisma.session.delete({
+          where: { id: session.id },
+        });
+      } catch (sessionError) {
+        console.error("Error deleting session:", sessionError);
+      }
+    }
 
-    // Clean up merchant data (optional - you might want to keep data for reinstall)
-    await cleanupMerchantData(merchant.id);
-
-    return json({ success: true });
+    return new Response("OK", { status: 200 });
 
   } catch (error) {
     console.error("Error processing app/uninstalled webhook:", error);
-    return json({ error: "Internal server error" }, { status: 500 });
+    return new Response("Error processing webhook", { status: 500 });
   }
 }
 

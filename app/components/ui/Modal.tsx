@@ -9,7 +9,7 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   className?: string;
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | '2xl';
   showCloseButton?: boolean;
 }
 
@@ -29,6 +29,7 @@ const Modal: React.FC<ModalProps> = ({
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl',
+    '2xl': 'max-w-6xl',
   };
 
   return (
@@ -42,7 +43,7 @@ const Modal: React.FC<ModalProps> = ({
       {/* Modal */}
       <div
         className={cn(
-          'relative w-full mx-4 bg-white rounded-lg shadow-xl',
+          'relative w-full mx-4 bg-white rounded-lg shadow-xl max-h-[90vh] flex flex-col',
           sizeClasses[size],
           className
         )}
@@ -67,7 +68,7 @@ const Modal: React.FC<ModalProps> = ({
         )}
         
         {/* Content */}
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto flex-1">
           {children}
         </div>
       </div>
