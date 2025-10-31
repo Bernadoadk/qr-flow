@@ -102,7 +102,7 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ["@shopify/app-bridge-react", "@shopify/polaris"],
+    include: ["@shopify/app-bridge-react", "@shopify/polaris", "react-is"],
     exclude: ["puppeteer"],
   },
 }) satisfies UserConfig;
