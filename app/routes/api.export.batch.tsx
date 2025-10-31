@@ -2,10 +2,7 @@ import { json, type ActionFunctionArgs } from "@remix-run/node";
 import { prisma } from "~/db.server";
 import { requireMerchantSession } from "~/utils/auth.server";
 import QRCode from "qrcode";
-// Dynamic import to reduce bundle size
-async function getSharp() {
-  return (await import("sharp")).default;
-}
+import sharp from "sharp";
 import JSZip from "jszip";
 
 export const action = async ({ request }: ActionFunctionArgs) => {
@@ -76,7 +73,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
           const base64Data = qrDataURL.replace(/^data:image\/png;base64,/, "");
           const pngBuffer = Buffer.from(base64Data, "base64");
-          const sharp = await getSharp();
           qrBuffer = await sharp(pngBuffer)
             .resize(size, size)
             .toFormat("pdf")
@@ -94,7 +90,6 @@ export const action = async ({ request }: ActionFunctionArgs) => {
           });
           const base64Data = qrDataURL.replace(/^data:image\/png;base64,/, "");
           const pngBuffer = Buffer.from(base64Data, "base64");
-          const sharp = await getSharp();
           qrBuffer = await sharp(pngBuffer)
             .resize(size, size)
             .png()

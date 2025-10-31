@@ -1,7 +1,4 @@
-// Dynamic import to reduce bundle size
-async function getSharp() {
-  return (await import("sharp")).default;
-}
+import sharp from "sharp";
 
 export interface UploadResult {
   url: string;
@@ -38,7 +35,6 @@ export class UploadService {
       let metadata;
 
       try {
-        const sharp = await getSharp();
         // Get original metadata
         metadata = await sharp(file).metadata();
         
@@ -156,7 +152,6 @@ export class UploadService {
       }
 
       // Compress with Sharp
-      const sharp = await getSharp();
       const compressedBuffer = await sharp(buffer)
         .jpeg({ 
           quality: 70,

@@ -33,6 +33,14 @@ try {
     console.log('⚠️ DATABASE_URL non trouvée, saut des migrations');
   }
 
+  // Builder l'application Remix
+  console.log('🏗️ Construction de l\'application Remix...');
+  execSync('npx remix vite:build', { 
+    stdio: 'inherit',
+    env: { ...process.env }
+  });
+  console.log('✅ Build Remix terminé avec succès');
+
 } catch (error) {
   console.error('❌ Erreur lors du processus de build:', error.message);
   process.exit(1);

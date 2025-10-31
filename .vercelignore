@@ -16,8 +16,3 @@ coverage
 dist
 build/client
 prisma/dev.sqlite
-node_modules/puppeteer
-node_modules/@img
-node_modules/@emotion
-.pnpm-debug.log
-.eslintcache

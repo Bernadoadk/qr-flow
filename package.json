@@ -8,7 +8,6 @@
     "config:link": "shopify app config link",
     "generate": "shopify app generate",
     "deploy": "shopify app deploy",
-    "deploy:prod": "node scripts/deploy-production.js",
     "config:use": "shopify app config use",
     "env": "shopify app env",
     "start": "remix-serve ./build/server/index.js",
@@ -37,7 +36,8 @@
     "test:coverage": "jest --coverage",
     "test:watch": "jest --watch",
     "fidelity:on": "node scripts/toggleFidelityAccess.js on",
-    "fidelity:off": "node scripts/toggleFidelityAccess.js off"
+    "fidelity:off": "node scripts/toggleFidelityAccess.js off",
+    "deploy:prod": "node scripts/deploy-production.js"
   },
   "type": "module",
   "engines": {
@@ -55,7 +55,6 @@
     "@remix-run/fs-routes": "^2.16.1",
     "@remix-run/node": "^2.16.1",
     "@remix-run/react": "^2.16.1",
-    "@remix-run/route-config": "^2.16.1",
     "@remix-run/serve": "^2.16.1",
     "@sendgrid/mail": "^8.1.6",
     "@shopify/app-bridge-react": "^4.1.6",
@@ -82,12 +81,12 @@
     "multer": "^2.0.2",
     "postcss": "^8.5.6",
     "prisma": "^6.2.1",
+    "puppeteer": "^24.15.0",
     "qr-code-styling": "^1.9.2",
     "qrcode": "^1.5.4",
     "qrcode.react": "^4.2.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
-    "react-is": "^18.3.1",
     "react-qr-code": "^2.0.18",
     "react-router-dom": "^7.9.4",
     "recharts": "^3.2.1",
@@ -101,6 +100,7 @@
   "devDependencies": {
     "@playwright/test": "^1.56.1",
     "@remix-run/eslint-config": "^2.16.1",
+    "@remix-run/route-config": "^2.16.1",
     "@shopify/api-codegen-preset": "^1.1.1",
     "@types/eslint": "^9.6.1",
     "@types/geoip-lite": "^1.4.4",
@@ -112,7 +112,6 @@
     "eslint": "^8.42.0",
     "eslint-config-prettier": "^10.0.1",
     "prettier": "^3.2.4",
-    "puppeteer": "^24.15.0",
     "tsx": "^4.20.6",
     "typescript": "^5.2.2",
     "vite": "^6.2.2"
