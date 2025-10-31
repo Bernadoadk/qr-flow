@@ -72,6 +72,35 @@ export default defineConfig({
   ],
   build: {
     assetsInlineLimit: 0,
+    rollupOptions: {
+      external: (id) => {
+        // Exclude heavy dependencies from server bundle
+        if (id === 'puppeteer' || id.startsWith('puppeteer/')) {
+          return true;
+        }
+        // Note: sharp is dynamically imported, but its native deps are still bundled
+        // This is a limitation - sharp's native dependencies are very large
+        return false;
+      },
+      output: {
+        manualChunks: (id) => {
+          // Separate heavy dependencies into their own chunks
+          if (id.includes('node_modules')) {
+            if (id.includes('puppeteer')) {
+              return 'puppeteer';
+            }
+            if (id.includes('@shopify/polaris')) {
+              return 'polaris';
+            }
+            if (id.includes('@shopify/app-bridge')) {
+              return 'app-bridge';
+            }
+            // Group other node_modules
+            return 'vendor';
+          }
+        },
+      },
+    },
   },
   optimizeDeps: {
     include: ["@shopify/app-bridge-react", "@shopify/polaris", "react-is"],

@@ -1,7 +1,10 @@
 import { json, type LoaderFunctionArgs } from "@remix-run/node";
 import { prisma } from "~/db.server";
 import { requireMerchantSession } from "~/utils/auth.server";
-import sharp from "sharp";
+// Dynamic import to reduce bundle size
+async function getSharp() {
+  return (await import("sharp")).default;
+}
 import QRCode from "qrcode";
 
 export async function loader({ request, params }: LoaderFunctionArgs) {
@@ -64,6 +67,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       });
     } else if (format === "pdf") {
       // Generate PDF using sharp
+      const sharp = await getSharp();
       const pdfBuffer = await sharp(qrBuffer)
         .resize(size, size)
         .toFormat("pdf")
@@ -77,6 +81,7 @@ export async function loader({ request, params }: LoaderFunctionArgs) {
       });
     } else {
       // Default to PNG
+      const sharp = await getSharp();
       const pngBuffer = await sharp(qrBuffer)
         .resize(size, size)
         .png()

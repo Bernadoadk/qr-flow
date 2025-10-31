@@ -1,4 +1,7 @@
-// Use dynamic import for sharp to reduce bundle size in serverless
+// Dynamic import to reduce bundle size
+async function getSharp() {
+  return (await import("sharp")).default;
+}
 
 export interface UploadResult {
   url: string;
@@ -8,18 +11,6 @@ export interface UploadResult {
   format?: string;
   size?: number;
   base64?: string;
-}
-
-/**
- * Dynamically import sharp only when needed
- */
-async function getSharp() {
-  try {
-    const sharpModule = await import("sharp");
-    return sharpModule.default;
-  } catch (error) {
-    return null;
-  }
 }
 
 export class UploadService {
@@ -42,44 +33,38 @@ export class UploadService {
       const quality = options.quality || 85;
       const maxSizeKB = options.maxSizeKB || 200; // 200KB max
 
-      // Process image with Sharp (if available)
+      // Process image with Sharp
       let processedBuffer = file;
-      let metadata: { width?: number; height?: number; format?: string } = {};
+      let metadata;
 
-      const sharp = await getSharp();
-      if (sharp) {
-        try {
-          // Get original metadata
-          metadata = await sharp(file).metadata();
+      try {
+        const sharp = await getSharp();
+        // Get original metadata
+        metadata = await sharp(file).metadata();
+        
+        // Resize if needed
+        if (metadata.width && metadata.height) {
+          const sharpInstance = sharp(file);
           
-          // Resize if needed
-          if (metadata.width && metadata.height) {
-            const sharpInstance = sharp(file);
-            
-            // Resize to fit within max dimensions
-            sharpInstance.resize(maxWidth, maxHeight, {
-              fit: "inside",
-              withoutEnlargement: true,
-            });
-            
-            // Optimize quality
-            sharpInstance.jpeg({ 
-              quality,
-              progressive: true,
-              mozjpeg: true
-            });
-            
-            processedBuffer = await sharpInstance.toBuffer();
-          }
-        } catch (error) {
-          console.warn("Error processing image with Sharp:", error);
-          // Fallback to original buffer if Sharp fails
-          processedBuffer = file;
-          metadata = { width: 0, height: 0, format: 'unknown' };
+          // Resize to fit within max dimensions
+          sharpInstance.resize(maxWidth, maxHeight, {
+            fit: "inside",
+            withoutEnlargement: true,
+          });
+          
+          // Optimize quality
+          sharpInstance.jpeg({ 
+            quality,
+            progressive: true,
+            mozjpeg: true
+          });
+          
+          processedBuffer = await sharpInstance.toBuffer();
         }
-      } else {
-        // Sharp not available, use original file
-        console.warn("Sharp not available, using original image");
+      } catch (error) {
+        console.warn("Error processing image with Sharp:", error);
+        // Fallback to original buffer if Sharp fails
+        processedBuffer = file;
         metadata = { width: 0, height: 0, format: 'unknown' };
       }
 
@@ -170,26 +155,17 @@ export class UploadService {
         return base64; // Already small enough
       }
 
-      // Try to compress with Sharp if available
+      // Compress with Sharp
       const sharp = await getSharp();
-      if (sharp) {
-        try {
-          const compressedBuffer = await sharp(buffer)
-            .jpeg({ 
-              quality: 70,
-              progressive: true,
-              mozjpeg: true
-            })
-            .toBuffer();
+      const compressedBuffer = await sharp(buffer)
+        .jpeg({ 
+          quality: 70,
+          progressive: true,
+          mozjpeg: true
+        })
+        .toBuffer();
 
-          return `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
-        } catch (error) {
-          console.warn("Error compressing with Sharp:", error);
-        }
-      }
-
-      // Return original if compression not available or failed
-      return base64;
+      return `data:image/jpeg;base64,${compressedBuffer.toString('base64')}`;
     } catch (error) {
       console.error("Error compressing image:", error);
       return base64; // Return original if compression fails
