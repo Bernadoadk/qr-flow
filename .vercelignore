@@ -1,4 +1,7 @@
 node_modules
+build
+.vercel
+.env
 .env.local
 .env.development.local
 .env.test.local
@@ -14,7 +17,6 @@ coverage
 .nyc_output
 .cache
 dist
-build/client
 prisma/dev.sqlite
 node_modules/puppeteer
 node_modules/@img
