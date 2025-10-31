@@ -2,7 +2,6 @@ import { vitePlugin as remix } from "@remix-run/dev";
 import { installGlobals } from "@remix-run/node";
 import { defineConfig, type UserConfig } from "vite";
 import tsconfigPaths from "vite-tsconfig-paths";
-import path from "path";
 
 installGlobals({ nativeFetch: true });
 
@@ -39,11 +38,6 @@ if (host === "localhost") {
 }
 
 export default defineConfig({
-  resolve: {
-    alias: {
-      "~": path.resolve(__dirname, "./app"),
-    },
-  },
   server: {
     allowedHosts: [host],
     cors: {
@@ -72,8 +66,27 @@ export default defineConfig({
   ],
   build: {
     assetsInlineLimit: 0,
+    chunkSizeWarningLimit: 1000,
+  },
+  ssr: {
+    // Externaliser les dépendances natives lourdes du bundle SSR
+    // Elles seront chargées à runtime depuis node_modules (réduit la taille du bundle)
+    external: [
+      'sharp',
+      'puppeteer',
+      '@sparticuz/chromium',
+      '@img/sharp-libvips-dev',
+      '@img/sharp-wasm32',
+    ],
   },
   optimizeDeps: {
     include: ["@shopify/app-bridge-react", "@shopify/polaris"],
+    exclude: [
+      // Exclure sharp et puppeteer de l'optimisation des dépendances côté client
+      "sharp",
+      "puppeteer",
+      "@sparticuz/chromium",
+    ],
   },
 }) satisfies UserConfig;
+

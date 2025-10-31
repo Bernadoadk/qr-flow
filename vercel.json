@@ -12,6 +12,14 @@
       "NODE_ENV": "production"
     }
   },
+  "functions": {
+    "build/server/index.js": {
+      "maxDuration": 30,
+      "memory": 3008,
+      "includeFiles": "node_modules/sharp/**",
+      "excludeFiles": "node_modules/@img/sharp-libvips-dev/**"
+    }
+  },
   "regions": ["iad1"],
   "crons": [
     {
